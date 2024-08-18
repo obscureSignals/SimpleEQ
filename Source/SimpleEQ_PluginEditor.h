@@ -6,9 +6,9 @@
 #include <gin/gin.h>
 #include <juce_dsp/juce_dsp.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "SimpleEQ_PluginProcessor.h"
-#include "../../Gui/PresetPanel.h"
-#include "../../PluginProcessor.h"
+#include "matkatProcessor.h"
+#include "../Gui/PresetPanel.h"
+#include "../PluginProcessor.h"
 
 
 // TODO: numAves should be a constructor argument?
