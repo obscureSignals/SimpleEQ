@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
 template<typename T>
@@ -87,11 +86,9 @@ struct StereoSummingSampleFifo
         auto* leftChannelPtr = buffer.getReadPointer(0);
         auto* rightChannelPtr = buffer.getReadPointer(1);
 
-        float samp;
-        
         // sum L and R
         for( int i = 0; i < buffer.getNumSamples(); ++i ) {
-            samp = leftChannelPtr[i] + rightChannelPtr[i];
+            float samp = leftChannelPtr[i] + rightChannelPtr[i];
             pushNextSampleIntoFifo(samp);
         }
     }
@@ -142,6 +139,6 @@ private:
 
 using coefficientsPointer = juce::dsp::IIR::Filter<float>::CoefficientsPtr;
 
-inline void updateCoefficients(coefficientsPointer &old, const coefficientsPointer &replacements){
+inline void updateCoefficients (const coefficientsPointer &old, const coefficientsPointer &replacements){
     *old = *replacements;
 };

@@ -19,7 +19,7 @@ struct FFTDataGenerator
      audioData is incoming time domain data
      */
 
-    explicit FFTDataGenerator (const float negativeInfinity) : negativeInfinity (negativeInfinity)
+    explicit FFTDataGenerator (const float negativeInfinity) : fftOrder (0), fftSize (0), negativeInfinity (negativeInfinity)
     {
     }
     void produceFFTDataForRendering (const juce::AudioBuffer<float>& audioData, float newFFTOrder)
@@ -468,9 +468,9 @@ private:
 
     juce::Rectangle<int> getAnalysisArea() const;
 
-    bool isMouseOverAnalysisArea;
-    float freq, mag;
-    int mouseX, mouseY;
+    bool isMouseOverAnalysisArea {};
+    float freq {}, mag {};
+    int mouseX {}, mouseY {};
 
     juce::Component coordinateComponent; // Offset so that coordinate display corrosponds to very point of mouse
 

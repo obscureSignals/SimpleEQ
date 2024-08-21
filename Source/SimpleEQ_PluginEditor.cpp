@@ -110,7 +110,7 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
         auto pos = labels[i].pos;
         jassert (0.f <= pos);
 
-        auto ang = jmap (pos, 0.f, float (numChoices) - 1.f, startAng, endAng);
+        auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
 
         auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
 
@@ -343,7 +343,7 @@ void SpectrumDisplay::updateResponseCurve()
         double mag = 1.f;
 
         // Find the frequency asscoiated with this pixel in horizontal dimension of responseArea
-        auto freq = mapToLog10 (double (pix) / double (w), 20.0, 20000.0);
+        auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
 
         // Get the magnitude repsonse at this frequendcy from each filter and multiply them together
         if (!leftTrebleChain.isBypassed<0>())
@@ -539,9 +539,9 @@ void ResponseCurveComponent::mouseMove (const juce::MouseEvent& event)
     {
         const auto responseArea = coordinateComponent.getBounds();
         const auto w = responseArea.getWidth();
-        freq = juce::mapToLog10 (float (event.x) / float (w), 20.f, 20000.f);
+        freq = juce::mapToLog10 (static_cast<float> (event.x) / static_cast<float> (w), 20.f, 20000.f);
         const auto outputMin = responseArea.getHeight();
-        mag = juce::jmap (float (event.y), float (outputMin), 0.f, -30.f, 30.f);
+        mag = juce::jmap (static_cast<float> (event.y), static_cast<float> (outputMin), 0.f, -30.f, 30.f);
         const auto relEvent = event.getEventRelativeTo (this);
         mouseX = relEvent.x;
         mouseY = relEvent.y;
@@ -613,7 +613,7 @@ void ResponseCurveComponent::drawBackgroundGrid (juce::Graphics& g) const
     auto gain = getGains();
     for (auto gDb : gain)
     {
-        auto y = jmap (gDb, -30.f, 30.f, float (bottom), float (top));
+        auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
         g.drawHorizontalLine (y, left, right);
     }
 }
@@ -678,7 +678,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
     auto gain = getGains();
     for (auto gDb : gain)
     {
-        auto y = jmap (gDb, -30.f, 30.f, float (bottom), float (top));
+        auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
 
         String str;
         if (gDb > 0)
@@ -758,7 +758,7 @@ void PathProducer::process (juce::Rectangle<float> fftBounds, double sampleRate)
     }
 
     const auto fftSize = FFTDataGenerator.getFFTSize();
-    const auto binWidth = sampleRate / double (fftSize);
+    const auto binWidth = sampleRate / static_cast<double> (fftSize);
 
     while (FFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
     {
