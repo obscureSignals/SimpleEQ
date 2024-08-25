@@ -185,9 +185,6 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     // Get FFT path, fill  it and outline it
     auto FFTpath = leftPathProducer.getPath();
     g.setColour (displayColor);
-    //    float alphaVal = 0.7;
-    //    g.setColour (juce::Colours::whitesmoke.withMultipliedAlpha(alphaVal));
-
     g.setOpacity (0.6);
     g.fillPath (FFTpath);
     g.strokePath (FFTpath, PathStrokeType (1.f));
