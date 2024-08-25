@@ -5,15 +5,15 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, 
 {
     using namespace juce;
 
-    auto outline = slider.findColour (Slider::rotarySliderOutlineColourId);
-    auto fill = slider.findColour (Slider::rotarySliderFillColourId);
+    const auto outline = slider.findColour (Slider::rotarySliderOutlineColourId);
+    const auto fill = slider.findColour (Slider::rotarySliderFillColourId);
 
-    auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (16);
+    const auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (16);
 
-    auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
-    auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle); // Angle corrosponding to the current value of the control
-    auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
-    auto arcRadius = radius - lineW * 0.5f;
+    const auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
+    const auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle); // Angle corrosponding to the current value of the control
+    const auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
+    const auto arcRadius = radius - lineW * 0.5f;
 
     // This arc spans the angles corrosponding the full range of possible values
     Path backgroundArc;
@@ -71,12 +71,12 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
     using namespace juce;
 
-    auto startAng = degreesToRadians (180.f + 45.f);
-    auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
+    constexpr auto startAng = degreesToRadians (180.f + 45.f);
+    constexpr auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
 
-    auto range = getRange();
+    const auto range = getRange();
 
-    auto sliderBounds = getSliderBounds();
+    const auto sliderBounds = getSliderBounds();
 
     getLookAndFeel().drawRotarySlider (g,
         sliderBounds.getX(),
@@ -88,8 +88,8 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
         endAng,
         *this);
 
-    auto center = sliderBounds.toFloat().getCentre();
-    auto radius = sliderBounds.getWidth() * 0.4f;
+    const auto center = sliderBounds.toFloat().getCentre();
+    const auto radius = sliderBounds.getWidth() * 0.4f;
 
     // The text will be dark grey if the control is bypassed
     if (isEnabled())
@@ -104,13 +104,13 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
     g.setFont (getTextHeight() * 1.f);
 
     // Tic labels - min and max values for a continuous control, each value for a rotary switch
-    auto numChoices = labels.size();
+    const auto numChoices = labels.size();
     for (int i = 0; i < numChoices; ++i)
     {
-        auto pos = labels[i].pos;
+        const auto pos = labels[i].pos;
         jassert (0.f <= pos);
 
-        auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
+        const auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
 
         auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
 
@@ -183,7 +183,7 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     using namespace juce;
 
     // Get FFT path, fill  it and outline it
-    auto FFTpath = leftPathProducer.getPath();
+    const auto FFTpath = leftPathProducer.getPath();
     g.setColour (displayColor);
     g.setOpacity (0.6);
     g.fillPath (FFTpath);
@@ -212,47 +212,47 @@ void SpectrumDisplay::updateFiltersGUI()
 {
     // Updates the filters owned by the editor with the current control values
 
-    auto settings = audioProcessor.getSettings (audioProcessor.apvts);
-    double sampleRate = audioProcessor.getSampleRate();
+    const auto settings = audioProcessor.getSettings (audioProcessor.apvts);
+    const double sampleRate = audioProcessor.getSampleRate();
 
     // Calculate bass filter coefficients
-    auto bassCoeffs = getBassCoeffs (settings, sampleRate);
+    const auto bassCoeffs = getBassCoeffs (settings, sampleRate);
     // Convert array to coefficients pointer
-    juce::dsp::IIR::Coefficients<float>::Ptr bassCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (bassCoeffs)));
+    const juce::dsp::IIR::Coefficients<float>::Ptr bassCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (bassCoeffs)));
     // Apply coefficients to filters
     updateCoefficients (leftBassChain.get<0>().coefficients, bassCoeffsPtr);
     // Apply bass boost bypass
     leftBassChain.setBypassed<0> (!settings.bassBoostEnable);
 
     // Calculate treble filter coefficients
-    auto trebleCoeffs = getTrebleAttenCoeffs (settings, audioProcessor.getUpSampleRate());
+    const auto trebleCoeffs = getTrebleAttenCoeffs (settings, audioProcessor.getUpSampleRate());
     // Convert array to coefficients pointer
-    juce::dsp::IIR::Coefficients<float>::Ptr trebleCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (trebleCoeffs)));
+    const juce::dsp::IIR::Coefficients<float>::Ptr trebleCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (trebleCoeffs)));
     // Apply coefficients to filters
     updateCoefficients (leftTrebleChain.get<0>().coefficients, trebleCoeffsPtr);
     // Apply treble bypass
     leftTrebleChain.setBypassed<0> (!settings.trebleCutEnable);
 
     // Get inverse RIAA filter coefficients
-    auto RIAAcoeffs = getRIAACoeffs (settings, audioProcessor.getUpSampleRate());
+    const auto RIAAcoeffs = getRIAACoeffs (settings, audioProcessor.getUpSampleRate());
     // Convert array to coefficients pointer
-    juce::dsp::IIR::Coefficients<float>::Ptr RIAACoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (RIAAcoeffs)));
+    const juce::dsp::IIR::Coefficients<float>::Ptr RIAACoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (RIAAcoeffs)));
     // Apply coefficients to filters
     updateCoefficients (leftRIAAChain.get<0>().coefficients, RIAACoeffsPtr);
     // Apply RIAA bypass
     leftRIAAChain.setBypassed<0> (!settings.RIAAEnable);
 
     // Get high pass coefficients
-    auto hpfcoeffs = getHighPasscoeffs (settings, sampleRate);
+    const auto hpfcoeffs = getHighPasscoeffs (settings, sampleRate);
     // Convert array to coefficients pointer
-    juce::dsp::IIR::Coefficients<float>::Ptr hpfcoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (hpfcoeffs)));
+    const juce::dsp::IIR::Coefficients<float>::Ptr hpfcoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (hpfcoeffs)));
     // apply coefficients to filters depending on slope
     leftHPChain.setBypassed<0> (true);
     leftHPChain.setBypassed<1> (true);
     leftHPChain.setBypassed<2> (true);
 
     // Get coefficients for butterworth filters (any order over 1st)
-    auto hpfcoeffsPtrButter = getHighPassCoeffsButter (settings, sampleRate);
+    const auto hpfcoeffsPtrButter = getHighPassCoeffsButter (settings, sampleRate);
 
     switch (settings.highPassSlope)
     { // Based on the slope, enable certain sections. Notice that the cases have no break, therefore the steeper slopes will enable all of the SOS from the cases with gentler slopes as well.
@@ -281,7 +281,7 @@ void SpectrumDisplay::updateFiltersGUI()
     }
 
     // get low pass coefficients
-    auto lpfcoeffsPtr = getLowPasscoeffs (settings, audioProcessor.getSampleRate());
+    const auto lpfcoeffsPtr = getLowPasscoeffs (settings, audioProcessor.getSampleRate());
     // apply coefficients to filters depending on slope
     leftLPChain.setBypassed<0> (true);
     leftLPChain.setBypassed<1> (true);
@@ -313,12 +313,12 @@ void SpectrumDisplay::updateResponseCurve()
 {
     using namespace juce;
 
-    auto responseArea = getLocalBounds();
-    auto w = responseArea.getWidth();
+    const auto responseArea = getLocalBounds();
+    const auto w = responseArea.getWidth();
 
-    auto userPreferences = audioProcessor.getUserPreferences();
-    auto sampleRate = audioProcessor.getSampleRate();
-    auto upSampleRate = audioProcessor.getUpSampleRate();
+    const auto userPreferences = audioProcessor.getUserPreferences();
+    const auto sampleRate = audioProcessor.getSampleRate();
+    const auto upSampleRate = audioProcessor.getUpSampleRate();
 
     // This will be a vector of magnitude values for each pixel/frequency that we will conbvert to dB and then turn into a path
     std::vector<double> mags;
@@ -340,7 +340,7 @@ void SpectrumDisplay::updateResponseCurve()
         double mag = 1.f;
 
         // Find the frequency asscoiated with this pixel in horizontal dimension of responseArea
-        auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
+        const auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
 
         // Get the magnitude repsonse at this frequendcy from each filter and multiply them together
         if (!leftTrebleChain.isBypassed<0>())
@@ -383,7 +383,7 @@ void SpectrumDisplay::updateResponseCurve()
         // Magnitude to dB for this pixel/frequency
         mags[pix] = Decibels::gainToDecibels (mag);
 
-        auto y = map (mags[pix]);
+        const auto y = map (mags[pix]);
         if (pix == 0)
         {
             // Start path
@@ -413,7 +413,7 @@ ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : a
 
     // Set this component up as a listener for every parameter so that we can redraw the response curve whenver a parameter is changed
     const auto& params = audioProcessor.getParameters();
-    for (auto param : params)
+    for (const auto param : params)
     {
         param->addListener (this);
     }
@@ -428,7 +428,7 @@ ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : a
 ResponseCurveComponent::~ResponseCurveComponent()
 {
     const auto& params = audioProcessor.getParameters();
-    for (auto param : params)
+    for (const auto param : params)
     {
         param->removeListener (this);
     }
@@ -441,7 +441,7 @@ void ResponseCurveComponent::parameterValueChanged (int parameterIndex, float ne
 
 void ResponseCurveComponent::timerCallback()
 {
-    auto fftBounds = getAnalysisArea().toFloat();
+    const auto fftBounds = getAnalysisArea().toFloat();
 
     spectrumDisplay.setBounds (getAnalysisArea());
 
@@ -507,9 +507,9 @@ void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
             xLoc = mouseX - g.getCurrentFont().getStringWidth (coord) - 6;
         }
 
-        int yLoc = mouseY - 12;
+        const int yLoc = mouseY - 12;
 
-        auto coordRect = juce::Rectangle<int> (xLoc, yLoc, g.getCurrentFont().getStringWidth (coord), fontHeight);
+        const auto coordRect = juce::Rectangle<int> (xLoc, yLoc, g.getCurrentFont().getStringWidth (coord), fontHeight);
         g.drawFittedText (coord, coordRect, juce::Justification::centred, 1);
     }
 }
@@ -576,9 +576,9 @@ std::vector<float> ResponseCurveComponent::getXs (const std::vector<float>& freq
     // Get horizontal positons for each frequency tic
 
     std::vector<float> xs;
-    for (auto f : freqs)
+    for (const auto f : freqs)
     {
-        auto normX = juce::mapFromLog10 (f, 20.f, 20000.f);
+        const auto normX = juce::mapFromLog10 (f, 20.f, 20000.f);
         xs.push_back (left + width * normX);
     }
 
@@ -588,29 +588,29 @@ std::vector<float> ResponseCurveComponent::getXs (const std::vector<float>& freq
 void ResponseCurveComponent::drawBackgroundGrid (juce::Graphics& g) const
 {
     using namespace juce;
-    auto freqs = getFrequencies();
+    const auto freqs = getFrequencies();
 
-    auto renderArea = getAnalysisArea();
-    auto left = renderArea.getX();
-    auto right = renderArea.getRight();
-    auto top = renderArea.getY();
-    auto bottom = renderArea.getBottom();
-    auto width = renderArea.getWidth();
+    const auto renderArea = getAnalysisArea();
+    const auto left = renderArea.getX();
+    const auto right = renderArea.getRight();
+    const auto top = renderArea.getY();
+    const auto bottom = renderArea.getBottom();
+    const auto width = renderArea.getWidth();
 
-    auto xs = getXs (freqs, left, width);
+    const auto xs = getXs (freqs, left, width);
 
     // Draw vertical lines at each frequency tic
     g.setColour (Colour (60u, 60u, 60u));
-    for (auto x : xs)
+    for (const auto x : xs)
     {
         g.drawVerticalLine (x, top, bottom);
     }
 
     // Draw horizontal lines at each level tic
-    auto gain = getGains();
-    for (auto gDb : gain)
+    const auto gain = getGains();
+    for (const auto gDb : gain)
     {
-        auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
+        const auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
         g.drawHorizontalLine (y, left, right);
     }
 }
@@ -622,22 +622,22 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
     constexpr int fontHeight = 12;
     g.setFont (fontHeight);
 
-    auto renderArea = getAnalysisArea();
-    auto left = renderArea.getX();
+    const auto renderArea = getAnalysisArea();
+    const auto left = renderArea.getX();
 
-    auto top = renderArea.getY();
-    auto bottom = renderArea.getBottom();
-    auto width = renderArea.getWidth();
+    const auto top = renderArea.getY();
+    const auto bottom = renderArea.getBottom();
+    const auto width = renderArea.getWidth();
 
     // Draw frequency tic labels
 
-    auto freqs = getFrequencies();
-    auto xs = getXs (freqs, left, width);
+    const auto freqs = getFrequencies();
+    const auto xs = getXs (freqs, left, width);
 
     for (int i = 0; i < freqs.size(); ++i)
     {
         auto f = freqs[i];
-        auto x = xs[i];
+        const auto x = xs[i];
 
         bool addK = false;
         String str;
@@ -652,7 +652,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
             str << "k";
         str << "Hz";
 
-        auto textWidth = g.getCurrentFont().getStringWidth (str);
+        const auto textWidth = g.getCurrentFont().getStringWidth (str);
 
         Rectangle<int> r;
 
@@ -672,10 +672,10 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
 
     // Draw dB tic labels
 
-    auto gain = getGains();
-    for (auto gDb : gain)
+    const auto gain = getGains();
+    for (const auto gDb : gain)
     {
-        auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
+        const auto y = jmap (gDb, -30.f, 30.f, static_cast<float> (bottom), static_cast<float> (top));
 
         String str;
         if (gDb > 0)
@@ -685,7 +685,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
         if (gDb == 0)
             str << "dB";
 
-        auto textWidth = g.getCurrentFont().getStringWidth (str);
+        const auto textWidth = g.getCurrentFont().getStringWidth (str);
 
         Rectangle<int> r;
         r.setSize (textWidth, fontHeight);
@@ -738,7 +738,7 @@ void PathProducer::process (juce::Rectangle<float> fftBounds, double sampleRate)
     {
         if (Fifo->getAudioBuffer (tempIncomingBuffer))
         {
-            auto size = tempIncomingBuffer.getNumSamples();
+            const auto size = tempIncomingBuffer.getNumSamples();
 
             // Shift every value in monoBuffer starting at index size to the left by size positions
             juce::FloatVectorOperations::copy (monoBuffer.getWritePointer (0, 0), // Destination
