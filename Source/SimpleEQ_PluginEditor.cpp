@@ -242,37 +242,30 @@ void SpectrumDisplay::updateFiltersGUI()
     // Apply RIAA bypass
     leftRIAAChain.setBypassed<0> (!settings.RIAAEnable);
 
-    // Get high pass coefficients
-    const auto hpfcoeffs = getHighPasscoeffs (settings, sampleRate);
-    // Convert array to coefficients pointer
-    const juce::dsp::IIR::Coefficients<float>::Ptr hpfcoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (hpfcoeffs)));
+    // Get coefficients for high-pass filter
+    const auto hpfcoeffsPtr = getHighPassCoeffs (settings, sampleRate);
+
     // apply coefficients to filters depending on slope
     leftHPChain.setBypassed<0> (true);
     leftHPChain.setBypassed<1> (true);
-    leftHPChain.setBypassed<2> (true);
-
-    // Get coefficients for butterworth filters (any order over 1st)
-    const auto hpfcoeffsPtrButter = getHighPassCoeffsButter (settings, sampleRate);
 
     switch (settings.highPassSlope)
-    { // Based on the slope, enable certain sections. Notice that the cases have no break, therefore the steeper slopes will enable all of the SOS from the cases with gentler slopes as well.
+    {
         case Slope_24:
         {
         }
         case Slope_18:
         {
-            updateCoefficients (leftHPChain.get<2>().coefficients, hpfcoeffsPtrButter[1]);
-            leftHPChain.setBypassed<2> (false);
+            updateCoefficients (leftHPChain.get<1>().coefficients, hpfcoeffsPtr[1]);
+            leftHPChain.setBypassed<1> (false);
         }
         case Slope_12:
         {
-            updateCoefficients (leftHPChain.get<1>().coefficients, hpfcoeffsPtrButter[0]);
-            leftHPChain.setBypassed<1> (false);
+
         }
-        break;
         case Slope_6: // This will not be Butterworth
         {
-            updateCoefficients (leftHPChain.get<0>().coefficients, hpfcoeffsPtr);
+            updateCoefficients (leftHPChain.get<0>().coefficients, hpfcoeffsPtr[0]);
             leftHPChain.setBypassed<0> (false);
         }
         case Off:
@@ -282,9 +275,11 @@ void SpectrumDisplay::updateFiltersGUI()
 
     // get low pass coefficients
     const auto lpfcoeffsPtr = getLowPasscoeffs (settings, audioProcessor.getSampleRate());
+
     // apply coefficients to filters depending on slope
     leftLPChain.setBypassed<0> (true);
     leftLPChain.setBypassed<1> (true);
+
     switch (settings.lowPassSlope)
     {
         case Slope_24:
@@ -360,10 +355,6 @@ void SpectrumDisplay::updateResponseCurve()
         if (!leftHPChain.isBypassed<1>())
         {
             mag *= leftHPChain.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!leftHPChain.isBypassed<2>())
-        {
-            mag *= leftHPChain.get<2>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
 
         if (!leftLPChain.isBypassed<0>())

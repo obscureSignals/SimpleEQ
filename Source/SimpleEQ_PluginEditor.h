@@ -408,8 +408,7 @@ private:
     PlayBackEQAudioProcessor& audioProcessor;
     PathProducer leftPathProducer;
     juce::dsp::ProcessorChain<Filter> leftBassChain, leftTrebleChain, leftRIAAChain;
-    juce::dsp::ProcessorChain<Filter, Filter, Filter> leftHPChain;
-    juce::dsp::ProcessorChain<Filter, Filter> leftLPChain;
+    juce::dsp::ProcessorChain<Filter, Filter> leftLPChain, leftHPChain;
     juce::Path responseCurve;
 };
 
