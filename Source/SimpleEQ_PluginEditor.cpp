@@ -527,9 +527,9 @@ void ResponseCurveComponent::mouseMove (const juce::MouseEvent& event)
     {
         const auto responseArea = coordinateComponent.getBounds();
         const auto w = responseArea.getWidth();
-        freq = juce::mapToLog10 (static_cast<float> (event.x) / static_cast<float> (w), 20.f, 20000.f);
-        const auto outputMin = responseArea.getHeight();
-        mag = juce::jmap (static_cast<float> (event.y), static_cast<float> (outputMin), 0.f, -30.f, 30.f);
+        freq = juce::mapToLog10 (event.position.x / static_cast<float> (w), 20.f, 20000.f);
+        const auto outputMin = static_cast<float> (responseArea.getHeight());
+        mag = juce::jmap (event.position.y, outputMin, 0.f, -30.f, 30.f);
         const auto relEvent = event.getEventRelativeTo (this);
         mouseX = relEvent.x;
         mouseY = relEvent.y;
@@ -700,7 +700,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
 void ResponseCurveComponent::resized()
 {
     auto coordinateBounds = getAnalysisArea();
-    coordinateBounds.translate (1, 3);
+    coordinateBounds.translate (2, 3);
     coordinateComponent.setBounds (coordinateBounds);
     //    responseCurve.preallocateSpace(getWidth() * 3);
 }
