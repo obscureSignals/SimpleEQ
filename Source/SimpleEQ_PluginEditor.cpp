@@ -69,6 +69,8 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, 
 
 void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
+    TRACE_COMPONENT();
+
     using namespace juce;
 
     constexpr auto startAng = degreesToRadians (180.f + 45.f);
@@ -180,6 +182,8 @@ void SpectrumDisplay::pathProducerProcess (juce::Rectangle<float> fftBounds)
 
 void SpectrumDisplay::paint (juce::Graphics& g)
 {
+    TRACE_COMPONENT();
+
     using namespace juce;
 
     // Get FFT path, fill  it and outline it
@@ -206,6 +210,7 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     // Draw response curve
     g.setColour (Colours::white.withBrightness (0.9));
     g.strokePath (responseCurve, PathStrokeType (2.f));
+
 }
 
 void SpectrumDisplay::updateFiltersGUI()
@@ -398,6 +403,7 @@ void SpectrumDisplay::resized()
 ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : audioProcessor (p),
                                                                                spectrumDisplay (audioProcessor)
 {
+    setOpaque(true);
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    FFTpaths.clear();
     //    FFTpaths.resize(numPaths, path);
@@ -414,6 +420,7 @@ ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : a
     addAndMakeVisible (spectrumDisplay);
     addAndMakeVisible (coordinateComponent);
     coordinateComponent.addMouseListener (this, true);
+    coordinateComponent.setMouseCursor(juce::MouseCursor::CrosshairCursor);
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()
@@ -449,6 +456,8 @@ void ResponseCurveComponent::timerCallback()
 
 void ResponseCurveComponent::paint (juce::Graphics& g)
 {
+    TRACE_COMPONENT();
+    g.fillAll(juce::Colours::black);
     drawBackgroundGrid (g);
     g.setColour (colors.textColor);
     drawTextLabels (g);
@@ -456,6 +465,8 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
 
 void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
 {
+    TRACE_COMPONENT();
+
     if (isMouseOverAnalysisArea)
     {
         juce::String coord = "(";
@@ -498,7 +509,7 @@ void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
             xLoc = mouseX - g.getCurrentFont().getStringWidth (coord) - 6;
         }
 
-        const int yLoc = mouseY - 12;
+        const int yLoc = mouseY - 18;
 
         const auto coordRect = juce::Rectangle<int> (xLoc, yLoc, g.getCurrentFont().getStringWidth (coord), fontHeight);
         g.drawFittedText (coord, coordRect, juce::Justification::centred, 1);
@@ -700,7 +711,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
 void ResponseCurveComponent::resized()
 {
     auto coordinateBounds = getAnalysisArea();
-    coordinateBounds.translate (2, 3);
+    coordinateBounds.translate (2, 0);
     coordinateComponent.setBounds (coordinateBounds);
     //    responseCurve.preallocateSpace(getWidth() * 3);
 }
