@@ -414,7 +414,7 @@ private:
 
 //=============================================================
 
-struct ResponseCurveComponent : juce::Component,
+struct ResponseCurveComponent final : juce::Component,
                                 juce::AudioProcessorParameter::Listener,
                                 juce::Timer
 {
@@ -449,6 +449,9 @@ struct ResponseCurveComponent : juce::Component,
     void mouseEnter (const juce::MouseEvent& event) override;
     void mouseExit (const juce::MouseEvent& event) override;
 
+    void startRefresh() { startTimerHz (refreshRate); }
+    void stopRefresh() { stopTimer(); };
+
 private:
     Gui::colorPalette colors;
 
@@ -473,6 +476,7 @@ private:
 
     juce::Component coordinateComponent; // Offset so that coordinate display corrosponds to very point of mouse
 
+    int refreshRate {60};
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    std::vector<juce::Path> FFTpaths;
     //    int numPaths = 10;

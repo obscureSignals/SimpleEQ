@@ -1,7 +1,7 @@
 
 #include "SimpleEQ_PluginEditor.h"
 
-void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
+void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y, const int width, const int height, const float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
 {
     using namespace juce;
 
@@ -175,7 +175,7 @@ SpectrumDisplay::SpectrumDisplay (PlayBackEQAudioProcessor& p) : audioProcessor 
 
 SpectrumDisplay::~SpectrumDisplay() = default;
 
-void SpectrumDisplay::pathProducerProcess (juce::Rectangle<float> fftBounds)
+void SpectrumDisplay::pathProducerProcess (const juce::Rectangle<float> fftBounds)
 {
     leftPathProducer.process (fftBounds, audioProcessor.getSampleRate());
 }
@@ -330,7 +330,7 @@ void SpectrumDisplay::updateResponseCurve()
     // Create map to convert values in dB to vertical position in responseArea
     const double outputMin = responseArea.getBottom();
     const double outputMax = responseArea.getY();
-    auto map = [outputMin, outputMax] (double input) {
+    auto map = [outputMin, outputMax] (const double input) {
         return jmap (input, -30.0, 30.0, outputMin, outputMax);
     };
 
@@ -415,7 +415,7 @@ ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : a
         param->addListener (this);
     }
 
-    startTimerHz (60);
+    startRefresh();
 
     addAndMakeVisible (spectrumDisplay);
     addAndMakeVisible (coordinateComponent);
@@ -573,7 +573,7 @@ std::vector<float> ResponseCurveComponent::getGains()
     };
 }
 
-std::vector<float> ResponseCurveComponent::getXs (const std::vector<float>& freqs, float left, float width)
+std::vector<float> ResponseCurveComponent::getXs (const std::vector<float>& freqs, const float left, const float width)
 {
     // Get horizontal positons for each frequency tic
 
@@ -717,7 +717,7 @@ void ResponseCurveComponent::resized()
 }
 
 //=================================================================
-void PathProducer::process (juce::Rectangle<float> fftBounds, double sampleRate)
+void PathProducer::process (const juce::Rectangle<float> fftBounds, const double sampleRate)
 {
     /** This function will:
      - Query the processor FIFO to see if any buffers are available
