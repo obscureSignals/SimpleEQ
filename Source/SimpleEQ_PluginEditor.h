@@ -4,6 +4,7 @@
 #include "../../Gui/PresetPanel.h"
 #include "../../PluginProcessor.h"
 #include "SimpleEQ_PluginProcessor.h"
+#include "melatonin_inspector/melatonin/helpers/timing.h"
 #include <gin/gin.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
@@ -22,7 +23,7 @@ struct FFTDataGenerator
     explicit FFTDataGenerator (const float negativeInfinity) : fftOrder (0), fftSize (0), negativeInfinity (negativeInfinity)
     {
     }
-    void produceFFTDataForRendering (const juce::AudioBuffer<float>& audioData, float newFFTOrder)
+    void produceFFTDataForRendering (const juce::AudioBuffer<float>& audioData, const float newFFTOrder)
     {
         if (newFFTOrder != fftOrder)
         {
@@ -86,7 +87,7 @@ struct FFTDataGenerator
         fftDataFifo.push (fftDataAve);
     }
 
-    void changeOrder (int newOrder)
+    void changeOrder (const int newOrder)
     {
         // When you change order, recreate the window, forwardFFT, fifo, fftData
         // Also reset the fifoIndex
@@ -155,9 +156,9 @@ struct AnalyzerPathGenerator
     //       - bottom (+ 6) is negative infintity dB
     //    binWidth is width of FFT bins in Hz = sampleRate/fftSize
     void generatePath (const std::vector<float>& renderData,
-        juce::Rectangle<float> fftBounds,
+        const juce::Rectangle<float> fftBounds,
         int fftSize,
-        float binWidth)
+        const float binWidth)
     {
         auto top = fftBounds.getY();
         auto bottom = fftBounds.getHeight();
@@ -175,7 +176,7 @@ struct AnalyzerPathGenerator
 
         // create horizontal map from dB value to pixel space
         const auto negInf = negativeInfinity;
-        auto map = [bottom, top, negInf] (float v) {
+        auto map = [bottom, top, negInf] (const float v) {
             return juce::jmap (v, negInf, 0.f, (bottom + 6.f), top);
         };
 
@@ -397,7 +398,7 @@ public:
     void resized() override;
     void updateResponseCurve();
     void updateFiltersGUI();
-    void setDisplayColor (juce::Colour newDisplayColor)
+    void setDisplayColor (const juce::Colour newDisplayColor)
     {
         displayColor = newDisplayColor;
     }
@@ -415,10 +416,10 @@ private:
 //=============================================================
 
 struct ResponseCurveComponent final : juce::Component,
-                                juce::AudioProcessorParameter::Listener,
-                                juce::Timer
+                                      juce::AudioProcessorParameter::Listener,
+                                      juce::Timer
 {
-    explicit ResponseCurveComponent (PlayBackEQAudioProcessor&);
+    explicit ResponseCurveComponent (PlayBackEQAudioProcessor&, Gui::PresetPanel&);
     ~ResponseCurveComponent() override;
 
     void parameterValueChanged (int parameterIndex, float newValue) override;
@@ -441,7 +442,7 @@ struct ResponseCurveComponent final : juce::Component,
         repaint();
     }
 
-    void setSpectrumDisplayColor (juce::Colour newSpectrumDisplayColor)
+    void setSpectrumDisplayColor (const juce::Colour newSpectrumDisplayColor)
     {
         spectrumDisplay.setDisplayColor (newSpectrumDisplayColor);
     }
@@ -449,13 +450,14 @@ struct ResponseCurveComponent final : juce::Component,
     void mouseEnter (const juce::MouseEvent& event) override;
     void mouseExit (const juce::MouseEvent& event) override;
 
-    void startRefresh() { startTimerHz (refreshRate); }
-    void stopRefresh() { stopTimer(); };
-
 private:
     Gui::colorPalette colors;
 
     PlayBackEQAudioProcessor& audioProcessor;
+
+    Gui::PresetPanel& presetPanel;
+
+    bool checkRefreshB4Repaint { true };
 
     SpectrumDisplay spectrumDisplay;
 
@@ -476,7 +478,7 @@ private:
 
     juce::Component coordinateComponent; // Offset so that coordinate display corrosponds to very point of mouse
 
-    int refreshRate {60};
+    int refreshRate { 60 };
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    std::vector<juce::Path> FFTpaths;
     //    int numPaths = 10;

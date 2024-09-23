@@ -71,6 +71,8 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
 
+    melatonin::ComponentTimer timer { this };
+
     using namespace juce;
 
     constexpr auto startAng = degreesToRadians (180.f + 45.f);
@@ -184,6 +186,8 @@ void SpectrumDisplay::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
 
+    melatonin::ComponentTimer timer { this };
+
     using namespace juce;
 
     // Get FFT path, fill  it and outline it
@@ -210,7 +214,6 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     // Draw response curve
     g.setColour (Colours::white.withBrightness (0.9));
     g.strokePath (responseCurve, PathStrokeType (2.f));
-
 }
 
 void SpectrumDisplay::updateFiltersGUI()
@@ -266,7 +269,6 @@ void SpectrumDisplay::updateFiltersGUI()
         }
         case Slope_12:
         {
-
         }
         case Slope_6: // This will not be Butterworth
         {
@@ -400,10 +402,9 @@ void SpectrumDisplay::resized()
 
 //===========================================// Response Curve
 
-ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : audioProcessor (p),
-                                                                               spectrumDisplay (audioProcessor)
+ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p, Gui::PresetPanel& pp) : audioProcessor (p), presetPanel (pp), spectrumDisplay (audioProcessor)
 {
-    setOpaque(true);
+    setOpaque (true);
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    FFTpaths.clear();
     //    FFTpaths.resize(numPaths, path);
@@ -415,12 +416,12 @@ ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p) : a
         param->addListener (this);
     }
 
-    startRefresh();
+    startTimerHz (refreshRate);
 
     addAndMakeVisible (spectrumDisplay);
     addAndMakeVisible (coordinateComponent);
     coordinateComponent.addMouseListener (this, true);
-    coordinateComponent.setMouseCursor(juce::MouseCursor::CrosshairCursor);
+    coordinateComponent.setMouseCursor (juce::MouseCursor::CrosshairCursor);
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()
@@ -439,6 +440,12 @@ void ResponseCurveComponent::parameterValueChanged (int parameterIndex, float ne
 
 void ResponseCurveComponent::timerCallback()
 {
+    if (checkRefreshB4Repaint)
+    {
+        if (presetPanel.getRefreshResponse() == false)
+            return;
+    }
+
     const auto fftBounds = getAnalysisArea().toFloat();
 
     spectrumDisplay.setBounds (getAnalysisArea());
@@ -452,12 +459,16 @@ void ResponseCurveComponent::timerCallback()
     }
 
     repaint();
+
 }
 
 void ResponseCurveComponent::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
-    g.fillAll(juce::Colours::black);
+
+    melatonin::ComponentTimer timer { this };
+
+    g.fillAll (juce::Colours::black);
     drawBackgroundGrid (g);
     g.setColour (colors.textColor);
     drawTextLabels (g);
