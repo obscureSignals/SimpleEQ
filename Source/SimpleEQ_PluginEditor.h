@@ -11,6 +11,79 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sound_meter/sound_meter.h>
 
+#include <utility>
+
+struct FrequencyLabelsComponent final : juce::Component
+{
+    FrequencyLabelsComponent()
+    {
+        setOpaque (true);
+    }
+    void setFreqs (std::vector<float> newFreqs)
+    {
+        freqs = std::move (newFreqs);
+    }
+
+    void setXs (std::vector<float> newXs)
+    {
+        xs = std::move (newXs);
+    }
+
+    void drawLabels (juce::Graphics& g) const
+    {
+        g.setColour (juce::Colours::lightgrey);
+        constexpr int fontHeight = 12;
+        g.setFont (fontHeight);
+
+        // Draw frequency tic labels
+        for (int i = 0; i < freqs.size(); ++i)
+        {
+            auto f = freqs[i];
+            const auto x = xs[i];
+
+            bool addK = false;
+            juce::String str;
+            if (f > 999.f)
+            {
+                addK = true;
+                f /= 1000.f;
+            }
+
+            str << f;
+            if (addK)
+                str << "k";
+            str << "Hz";
+
+            const auto textWidth = g.getCurrentFont().getStringWidth (str);
+
+            juce::Rectangle<int> r;
+
+            r.setSize (textWidth, fontHeight);
+            if (f == 20.f && !addK)
+            {
+                r.setCentre (x + textWidth / 2.f, 0);
+            }
+            else
+            {
+                r.setCentre (x, 0);
+            }
+            r.setY (fontHeight / 2);
+
+            g.drawFittedText (str, r, juce::Justification::centred, 1);
+        }
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        g.fillAll (juce::Colours::black);
+        drawLabels (g);
+    }
+
+private:
+    std::vector<float> xs;
+    std::vector<float> freqs;
+};
+
 // TODO: numAves should be a constructor argument?
 template <typename BlockType>
 struct FFTDataGenerator
@@ -292,7 +365,61 @@ private:
     const float negativeInfinity;
 };
 
-//=================================================
+//==============================================
+
+struct LookAndFeelShort : juce::LookAndFeel_V4
+{
+    void drawRotarySlider (juce::Graphics&,
+        int x,
+        int y,
+        int width,
+        int height,
+        float sliderPosProportional,
+        float rotaryStartAngle,
+        float rotaryEndAngle,
+        juce::Slider&) override;
+
+private:
+    Gui::colorPalette colors;
+};
+struct RotarySliderWithLabelsShort : juce::Slider
+{
+    explicit RotarySliderWithLabelsShort (const juce::String& unitSuffix) : juce::Slider (juce::Slider::SliderStyle::Rotary,
+                                                                           juce::Slider::TextEntryBoxPosition::TextBoxBelow)
+    {
+        setLookAndFeel (&lnf);
+        setTextValueSuffix (unitSuffix); // set unit suffixes for value display
+        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display inivisible
+        setColour (juce::Slider::textBoxTextColourId, colors.textColor);
+        setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
+        // setSliderSnapsToMousePosition(false); // not available for rotary sliders :(
+    }
+
+    ~RotarySliderWithLabelsShort() override
+    {
+        setLookAndFeel (nullptr);
+    }
+
+    // Tic labels and postions
+    struct LabelPos
+    {
+        float pos;
+        juce::String label;
+    };
+    juce::Array<LabelPos> labels;
+
+    juce::String title;
+
+    void paint (juce::Graphics& g) override;
+    juce::Rectangle<int> getSliderBounds() const;
+    static int getTextHeight() { return 14; }
+
+private:
+    Gui::colorPalette colors;
+    LookAndFeelShort lnf;
+};
+
+//=======================================================
 
 struct LookAndFeel : juce::LookAndFeel_V4
 {
@@ -310,7 +437,7 @@ private:
     Gui::colorPalette colors;
 };
 
-//==============================================
+//=================================================
 
 struct RotarySliderWithLabels : juce::Slider
 {
@@ -450,6 +577,12 @@ struct ResponseCurveComponent final : juce::Component,
     void mouseEnter (const juce::MouseEvent& event) override;
     void mouseExit (const juce::MouseEvent& event) override;
 
+    static std::vector<float> getFrequencies();
+    static std::vector<float> getGains();
+    static std::vector<float> getXs (const std::vector<float>& freqs, float left, float width);
+
+    juce::Rectangle<int> getAnalysisArea() const;
+
 private:
     Gui::colorPalette colors;
 
@@ -465,12 +598,6 @@ private:
 
     void drawBackgroundGrid (juce::Graphics& g) const;
     void drawTextLabels (juce::Graphics& g) const;
-
-    static std::vector<float> getFrequencies();
-    static std::vector<float> getGains();
-    static std::vector<float> getXs (const std::vector<float>& freqs, float left, float width);
-
-    juce::Rectangle<int> getAnalysisArea() const;
 
     bool isMouseOverAnalysisArea {};
     float freq {}, mag {};
