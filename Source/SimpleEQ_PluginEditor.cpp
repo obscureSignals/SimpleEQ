@@ -14,7 +14,7 @@ void LookAndFeelShort::drawRotarySlider (juce::Graphics& g, const int x, const i
     const auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
     const auto arcRadius = radius - lineW * 0.5f;
 
-    const auto yCenter = bounds.getCentreY()-13;
+    const auto yCenter = bounds.getCentreY() - 13;
 
     // This arc spans the angles corrosponding the full range of possible values
     Path backgroundArc;
@@ -238,7 +238,6 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y,
     // Draw the thumb
     g.strokePath (thumbArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
 }
-
 
 void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
