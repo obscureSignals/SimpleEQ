@@ -83,13 +83,24 @@ struct StereoSummingSampleFifo
     void update(const BlockType& buffer)
     {
         jassert(prepared.get());
-        auto* leftChannelPtr = buffer.getReadPointer(0);
-        auto* rightChannelPtr = buffer.getReadPointer(1);
 
-        // sum L and R
-        for( int i = 0; i < buffer.getNumSamples(); ++i ) {
-            float samp = leftChannelPtr[i] + rightChannelPtr[i];
-            pushNextSampleIntoFifo(samp);
+        if (buffer.getNumChannels() == 1)
+        {
+            auto* leftChannelPtr = buffer.getReadPointer(0);
+            for( int i = 0; i < buffer.getNumSamples(); ++i ) {
+                const float samp = leftChannelPtr[i];
+                pushNextSampleIntoFifo(samp);
+            }
+        }
+        else
+        {
+            auto* leftChannelPtr = buffer.getReadPointer(0);
+            auto* rightChannelPtr = buffer.getReadPointer(1);
+            // sum L and R
+            for( int i = 0; i < buffer.getNumSamples(); ++i ) {
+                const float samp = leftChannelPtr[i] + rightChannelPtr[i];
+                pushNextSampleIntoFifo(samp);
+            }
         }
     }
 
