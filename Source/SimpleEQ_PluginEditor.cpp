@@ -74,8 +74,6 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
 
-    melatonin::ComponentTimer timer { this };
-
     using namespace juce;
 
     constexpr auto startAng = degreesToRadians (180.f + 45.f);
@@ -576,7 +574,7 @@ void SpectrumDisplay::resized()
 
 ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p, Gui::PresetPanel& pp) : audioProcessor (p), presetPanel (pp), spectrumDisplay (audioProcessor)
 {
-    setOpaque (true);
+    // setOpaque (true);
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    FFTpaths.clear();
     //    FFTpaths.resize(numPaths, path);
@@ -637,9 +635,7 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
 
-    melatonin::ComponentTimer timer { this };
-
-    g.fillAll (juce::Colours::black);
+    // g.fillAll (juce::Colours::black);
     drawBackgroundGrid (g);
     g.setColour (colors.textColor);
     drawTextLabels (g);
@@ -680,8 +676,6 @@ void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
         coord += juce::String (mag, 1);
         coord += "dB)";
 
-        g.setColour (colors.textColor);
-
         constexpr int fontHeight = 12;
         g.setFont (fontHeight);
 
@@ -694,6 +688,9 @@ void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
         const int yLoc = mouseY - 18;
 
         const auto coordRect = juce::Rectangle<int> (xLoc, yLoc, g.getCurrentFont().getStringWidth (coord), fontHeight);
+        g.setColour (juce::Colours::black.withAlpha (0.5f));
+        g.fillRect (coordRect);
+        g.setColour (colors.textColor);
         g.drawFittedText (coord, coordRect, juce::Justification::centred, 1);
     }
 }

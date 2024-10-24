@@ -10,14 +10,13 @@
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sound_meter/sound_meter.h>
-
 #include <utility>
 
 struct FrequencyLabelsComponent final : juce::Component
 {
     FrequencyLabelsComponent()
     {
-        setOpaque (true);
+        // setOpaque (true);
     }
     void setFreqs (std::vector<float> newFreqs)
     {
@@ -75,7 +74,7 @@ struct FrequencyLabelsComponent final : juce::Component
 
     void paint (juce::Graphics& g) override
     {
-        g.fillAll (juce::Colours::black);
+        // g.fillAll (juce::Colours::black);
         drawLabels (g);
     }
 
@@ -385,7 +384,7 @@ private:
 struct RotarySliderWithLabelsShort : juce::Slider
 {
     explicit RotarySliderWithLabelsShort (const juce::String& unitSuffix) : juce::Slider (juce::Slider::SliderStyle::Rotary,
-                                                                           juce::Slider::TextEntryBoxPosition::TextBoxBelow)
+                                                                                juce::Slider::TextEntryBoxPosition::TextBoxBelow)
     {
         setLookAndFeel (&lnf);
         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
