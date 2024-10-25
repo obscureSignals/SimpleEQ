@@ -241,8 +241,6 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
 
-    melatonin::ComponentTimer timer { this };
-
     using namespace juce;
 
     constexpr auto startAng = degreesToRadians (180.f + 45.f);
@@ -355,8 +353,6 @@ void SpectrumDisplay::pathProducerProcess (const juce::Rectangle<float> fftBound
 void SpectrumDisplay::paint (juce::Graphics& g)
 {
     TRACE_COMPONENT();
-
-    melatonin::ComponentTimer timer { this };
 
     using namespace juce;
 

@@ -84,7 +84,7 @@ struct StereoSummingSampleFifo
     {
         jassert (prepared.get());
 
-        if (buffer.getNumChannels() == 1)
+        if (buffer.getNumChannels() == 1) // mono instance
         {
             auto* leftChannelPtr = buffer.getReadPointer (0);
             for (int i = 0; i < buffer.getNumSamples(); ++i)
@@ -93,7 +93,7 @@ struct StereoSummingSampleFifo
                 pushNextSampleIntoFifo (samp);
             }
         }
-        else
+        else // stereo or ? instance
         {
             auto* leftChannelPtr = buffer.getReadPointer (0);
             auto* rightChannelPtr = buffer.getReadPointer (1);
