@@ -394,34 +394,34 @@ void SpectrumDisplay::updateFiltersGUI()
     // Convert array to coefficients pointer
     const juce::dsp::IIR::Coefficients<float>::Ptr bassCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (bassCoeffs)));
     // Apply coefficients to filters
-    updateCoefficients (leftBassChain.get<0>().coefficients, bassCoeffsPtr);
+    updateCoefficients (bassChain_graphic.get<0>().coefficients, bassCoeffsPtr);
     // Apply bass boost bypass
-    leftBassChain.setBypassed<0> (!settings.bassBoostEnable);
+    bassChain_graphic.setBypassed<0> (!settings.bassBoostEnable);
 
     // Calculate treble filter coefficients
     const auto trebleCoeffs = getTrebleAttenCoeffs (settings, audioProcessor.getUpSampleRate());
     // Convert array to coefficients pointer
     const juce::dsp::IIR::Coefficients<float>::Ptr trebleCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (trebleCoeffs)));
     // Apply coefficients to filters
-    updateCoefficients (leftTrebleChain.get<0>().coefficients, trebleCoeffsPtr);
+    updateCoefficients (trebleChain_graphic.get<0>().coefficients, trebleCoeffsPtr);
     // Apply treble bypass
-    leftTrebleChain.setBypassed<0> (!settings.trebleCutEnable);
+    trebleChain_graphic.setBypassed<0> (!settings.trebleCutEnable);
 
     // Get inverse RIAA filter coefficients
-    const auto RIAAcoeffs = getRIAACoeffs (settings, audioProcessor.getUpSampleRate());
+    const auto RIAAcoeffs = getRIAACoeffs (audioProcessor.getUpSampleRate());
     // Convert array to coefficients pointer
     const juce::dsp::IIR::Coefficients<float>::Ptr RIAACoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (RIAAcoeffs)));
     // Apply coefficients to filters
-    updateCoefficients (leftRIAAChain.get<0>().coefficients, RIAACoeffsPtr);
+    updateCoefficients (RIAAChain_graphic.get<0>().coefficients, RIAACoeffsPtr);
     // Apply RIAA bypass
-    leftRIAAChain.setBypassed<0> (!settings.RIAAEnable);
+    RIAAChain_graphic.setBypassed<0> (!settings.RIAAEnable);
 
     // Get coefficients for high-pass filter
     const auto hpfcoeffsPtr = getHighPassCoeffs (settings, sampleRate);
 
     // apply coefficients to filters depending on slope
-    leftHPChain.setBypassed<0> (true);
-    leftHPChain.setBypassed<1> (true);
+    HPChain_graphic.setBypassed<0> (true);
+    HPChain_graphic.setBypassed<1> (true);
 
     switch (settings.highPassSlope)
     {
@@ -430,16 +430,16 @@ void SpectrumDisplay::updateFiltersGUI()
         }
         case Slope_18:
         {
-            updateCoefficients (leftHPChain.get<1>().coefficients, hpfcoeffsPtr[1]);
-            leftHPChain.setBypassed<1> (false);
+            updateCoefficients (HPChain_graphic.get<1>().coefficients, hpfcoeffsPtr[1]);
+            HPChain_graphic.setBypassed<1> (false);
         }
         case Slope_12:
         {
         }
         case Slope_6: // This will not be Butterworth
         {
-            updateCoefficients (leftHPChain.get<0>().coefficients, hpfcoeffsPtr[0]);
-            leftHPChain.setBypassed<0> (false);
+            updateCoefficients (HPChain_graphic.get<0>().coefficients, hpfcoeffsPtr[0]);
+            HPChain_graphic.setBypassed<0> (false);
         }
         case Off:
         {
@@ -450,8 +450,8 @@ void SpectrumDisplay::updateFiltersGUI()
     const auto lpfcoeffsPtr = getLowPasscoeffs (settings, audioProcessor.getSampleRate());
 
     // apply coefficients to filters depending on slope
-    leftLPChain.setBypassed<0> (true);
-    leftLPChain.setBypassed<1> (true);
+    LPChain_graphic.setBypassed<0> (true);
+    LPChain_graphic.setBypassed<1> (true);
 
     switch (settings.lowPassSlope)
     {
@@ -460,21 +460,34 @@ void SpectrumDisplay::updateFiltersGUI()
         }
         case Slope_18:
         {
-            updateCoefficients (leftLPChain.get<1>().coefficients, lpfcoeffsPtr[1]);
-            leftLPChain.setBypassed<1> (false);
+            updateCoefficients (LPChain_graphic.get<1>().coefficients, lpfcoeffsPtr[1]);
+            LPChain_graphic.setBypassed<1> (false);
         }
         case Slope_12:
         {
         }
         case Slope_6:
         {
-            updateCoefficients (leftLPChain.get<0>().coefficients, lpfcoeffsPtr[0]);
-            leftLPChain.setBypassed<0> (false);
+            updateCoefficients (LPChain_graphic.get<0>().coefficients, lpfcoeffsPtr[0]);
+            LPChain_graphic.setBypassed<0> (false);
         }
         case Off:
         {
         }
     }
+
+    BBCchain_graphic.setBypassed<0> (!settings.BBCenable);
+    BBCchain_graphic.setBypassed<1> (!settings.BBCenable);
+    BBCchain_graphic.setBypassed<2> (!settings.BBCenable);
+    BBCchain_graphic.setBypassed<3> (!settings.BBCenable);
+
+    // TODO: This only needs to be done when a prepareToPlay is called
+    // Set coefficients for BBC filters
+    const auto BBCcoeffs = getBBCcoeffs(sampleRate);
+    updateCoefficients (BBCchain_graphic.get<0>().coefficients, BBCcoeffs[0]);
+    updateCoefficients (BBCchain_graphic.get<1>().coefficients, BBCcoeffs[1]);
+    updateCoefficients (BBCchain_graphic.get<2>().coefficients, BBCcoeffs[2]);
+    updateCoefficients (BBCchain_graphic.get<3>().coefficients, BBCcoeffs[3]);
 }
 
 void SpectrumDisplay::updateResponseCurve()
@@ -511,37 +524,54 @@ void SpectrumDisplay::updateResponseCurve()
         const auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
 
         // Get the magnitude repsonse at this frequendcy from each filter and multiply them together
-        if (!leftTrebleChain.isBypassed<0>())
+        if (!trebleChain_graphic.isBypassed<0>())
         {
-            mag *= leftTrebleChain.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
+            mag *= trebleChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
         }
 
-        if (!leftBassChain.isBypassed<0>())
+        if (!bassChain_graphic.isBypassed<0>())
         {
-            mag *= leftBassChain.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= bassChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
 
-        if (!leftHPChain.isBypassed<0>())
+        if (!HPChain_graphic.isBypassed<0>())
         {
-            mag *= leftHPChain.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= HPChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
-        if (!leftHPChain.isBypassed<1>())
+        if (!HPChain_graphic.isBypassed<1>())
         {
-            mag *= leftHPChain.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-
-        if (!leftLPChain.isBypassed<0>())
-        {
-            mag *= leftLPChain.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!leftLPChain.isBypassed<1>())
-        {
-            mag *= leftLPChain.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= HPChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
 
-        if (!leftRIAAChain.isBypassed<0>() && userPreferences.showRIAA)
+        if (!LPChain_graphic.isBypassed<0>())
         {
-            mag *= leftRIAAChain.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
+            mag *= LPChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+        }
+        if (!LPChain_graphic.isBypassed<1>())
+        {
+            mag *= LPChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+        }
+
+        if (!RIAAChain_graphic.isBypassed<0>() && userPreferences.showRIAA)
+        {
+            mag *= RIAAChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
+        }
+
+        if (!BBCchain_graphic.isBypassed<0>())
+        {
+            mag *= BBCchain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+        }
+        if (!BBCchain_graphic.isBypassed<1>())
+        {
+            mag *= BBCchain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+        }
+        if (!BBCchain_graphic.isBypassed<2>())
+        {
+            mag *= BBCchain_graphic.get<2>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+        }
+        if (!BBCchain_graphic.isBypassed<3>())
+        {
+            mag *= BBCchain_graphic.get<3>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
 
         // Magnitude to dB for this pixel/frequency

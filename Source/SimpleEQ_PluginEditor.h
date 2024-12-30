@@ -534,8 +534,9 @@ private:
     juce::Colour displayColor = colors.blue;
     PlayBackEQAudioProcessor& audioProcessor;
     PathProducer leftPathProducer;
-    juce::dsp::ProcessorChain<Filter> leftBassChain, leftTrebleChain, leftRIAAChain;
-    juce::dsp::ProcessorChain<Filter, Filter> leftLPChain, leftHPChain;
+    juce::dsp::ProcessorChain<Filter> bassChain_graphic, trebleChain_graphic, RIAAChain_graphic;
+    juce::dsp::ProcessorChain<Filter, Filter> LPChain_graphic, HPChain_graphic;
+    juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter> BBCchain_graphic;
     juce::Path responseCurve;
 };
 
