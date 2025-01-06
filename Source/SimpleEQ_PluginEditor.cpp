@@ -149,7 +149,7 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
         // Create rectangle for text bounds
         Rectangle<float> r;
         auto str = labels[i].label;
-        r.setSize (g.getCurrentFont().getStringWidth (str), getTextHeight());
+        r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), getTextHeight());
         r.setCentre (c);
         r.setY (r.getY() + getTextHeight());
 
@@ -159,7 +159,7 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 
     // Name of control
     Rectangle<float> r;
-    r.setSize (g.getCurrentFont().getStringWidth (title), getTextHeight());
+    r.setSize (getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
     r.setCentre (center);
     g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
 }
@@ -315,7 +315,7 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
         // Create rectangle for text bounds
         Rectangle<float> r;
         auto str = labels[i].label;
-        r.setSize (g.getCurrentFont().getStringWidth (str), getTextHeight());
+        r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), getTextHeight());
         r.setCentre (c);
         r.setY (r.getY() + getTextHeight());
 
@@ -325,7 +325,7 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
 
     // Name of control
     Rectangle<float> r;
-    r.setSize (g.getCurrentFont().getStringWidth (title), getTextHeight());
+    r.setSize (getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
     r.setCentre (center);
     g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
 }
@@ -476,18 +476,18 @@ void SpectrumDisplay::updateFiltersGUI()
         }
     }
 
-    BBCchain_graphic.setBypassed<0> (!settings.BBCenable);
-    BBCchain_graphic.setBypassed<1> (!settings.BBCenable);
-    BBCchain_graphic.setBypassed<2> (!settings.BBCenable);
-    BBCchain_graphic.setBypassed<3> (!settings.BBCenable);
+    specialCurveChain_graphic.setBypassed<0> (!settings.specialCurveEnable);
+    specialCurveChain_graphic.setBypassed<1> (!settings.specialCurveEnable);
+    specialCurveChain_graphic.setBypassed<2> (!settings.specialCurveEnable);
+    specialCurveChain_graphic.setBypassed<3> (!settings.specialCurveEnable);
 
     // TODO: This only needs to be done when a prepareToPlay is called
-    // Set coefficients for BBC filters
-    const auto BBCcoeffs = getBBCcoeffs(sampleRate);
-    updateCoefficients (BBCchain_graphic.get<0>().coefficients, BBCcoeffs[0]);
-    updateCoefficients (BBCchain_graphic.get<1>().coefficients, BBCcoeffs[1]);
-    updateCoefficients (BBCchain_graphic.get<2>().coefficients, BBCcoeffs[2]);
-    updateCoefficients (BBCchain_graphic.get<3>().coefficients, BBCcoeffs[3]);
+    // Set coefficients for special curve filters
+    const auto specialCurveCoeffs = getSpecialCurveCoeffs (sampleRate);
+    updateCoefficients (specialCurveChain_graphic.get<0>().coefficients, specialCurveCoeffs[0]);
+    updateCoefficients (specialCurveChain_graphic.get<1>().coefficients, specialCurveCoeffs[1]);
+    updateCoefficients (specialCurveChain_graphic.get<2>().coefficients, specialCurveCoeffs[2]);
+    updateCoefficients (specialCurveChain_graphic.get<3>().coefficients, specialCurveCoeffs[3]);
 }
 
 void SpectrumDisplay::updateResponseCurve()
@@ -557,21 +557,21 @@ void SpectrumDisplay::updateResponseCurve()
             mag *= RIAAChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
         }
 
-        if (!BBCchain_graphic.isBypassed<0>())
+        if (!specialCurveChain_graphic.isBypassed<0>())
         {
-            mag *= BBCchain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= specialCurveChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
-        if (!BBCchain_graphic.isBypassed<1>())
+        if (!specialCurveChain_graphic.isBypassed<1>())
         {
-            mag *= BBCchain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= specialCurveChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
-        if (!BBCchain_graphic.isBypassed<2>())
+        if (!specialCurveChain_graphic.isBypassed<2>())
         {
-            mag *= BBCchain_graphic.get<2>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= specialCurveChain_graphic.get<2>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
-        if (!BBCchain_graphic.isBypassed<3>())
+        if (!specialCurveChain_graphic.isBypassed<3>())
         {
-            mag *= BBCchain_graphic.get<3>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
+            mag *= specialCurveChain_graphic.get<3>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
         }
 
         // Magnitude to dB for this pixel/frequency
@@ -706,14 +706,14 @@ void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
         g.setFont (fontHeight);
 
         int xLoc = mouseX + 7;
-        if (xLoc + g.getCurrentFont().getStringWidth (coord) > getAnalysisArea().getRight())
+        if (xLoc + juce::GlyphArrangement::getStringWidthInt (g.getCurrentFont(), coord) > getAnalysisArea().getRight())
         {
-            xLoc = mouseX - g.getCurrentFont().getStringWidth (coord) - 6;
+            xLoc = mouseX - juce::GlyphArrangement::getStringWidthInt (g.getCurrentFont(), coord) - 6;
         }
 
         const int yLoc = mouseY - 18;
 
-        const auto coordRect = juce::Rectangle<int> (xLoc, yLoc, g.getCurrentFont().getStringWidth (coord), fontHeight);
+        const auto coordRect = juce::Rectangle<int> (xLoc, yLoc, juce::GlyphArrangement::getStringWidthInt (g.getCurrentFont(), coord), fontHeight);
         g.setColour (juce::Colours::black.withAlpha (0.5f));
         g.fillRect (coordRect);
         g.setColour (colors.textColor);
@@ -830,11 +830,11 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
     g.setFont (fontHeight);
 
     const auto renderArea = getAnalysisArea();
-    const auto left = renderArea.getX();
+    // const auto left = renderArea.getX();
 
     const auto top = renderArea.getY();
     const auto bottom = renderArea.getBottom();
-    const auto width = renderArea.getWidth();
+    // const auto width = renderArea.getWidth();
 
     // Draw frequency tic labels
 
@@ -892,7 +892,7 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
         if (gDb == 0)
             str << "dB";
 
-        const auto textWidth = g.getCurrentFont().getStringWidth (str);
+        const auto textWidth = GlyphArrangement::getStringWidthInt (g.getCurrentFont(), str);
 
         Rectangle<int> r;
         r.setSize (textWidth, fontHeight);

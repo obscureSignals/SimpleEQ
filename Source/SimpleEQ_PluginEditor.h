@@ -536,7 +536,7 @@ private:
     PathProducer leftPathProducer;
     juce::dsp::ProcessorChain<Filter> bassChain_graphic, trebleChain_graphic, RIAAChain_graphic;
     juce::dsp::ProcessorChain<Filter, Filter> LPChain_graphic, HPChain_graphic;
-    juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter> BBCchain_graphic;
+    juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter> specialCurveChain_graphic;
     juce::Path responseCurve;
 };
 
@@ -611,3 +611,30 @@ private:
     //    int numPaths = 10;
     //    int pathCount = 0;
 };
+
+inline int getMaxStringWidth (juce::Font font, juce::String text)
+{
+    juce::String currentLineStr;
+    int maxLineWidth = 0;
+
+    for (int idx = 0; idx < text.length(); ++idx) // Run through each character
+    {
+        if (text[idx] == '\n') // We hit a line break
+        {
+            auto currentLineWidth = juce::GlyphArrangement::getStringWidthInt (font, currentLineStr);
+            if (currentLineWidth > maxLineWidth)
+                maxLineWidth = currentLineWidth;
+            currentLineStr.clear();
+        }
+        else
+        {
+            currentLineStr += text[idx];
+        }
+    }
+    auto currentLineWidth = juce::GlyphArrangement::getStringWidthInt (font, currentLineStr); // last line
+    if (currentLineWidth > maxLineWidth)
+        maxLineWidth = currentLineWidth;
+    return maxLineWidth;
+}
+
+
