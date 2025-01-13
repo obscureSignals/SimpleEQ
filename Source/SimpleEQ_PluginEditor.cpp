@@ -481,9 +481,16 @@ void SpectrumDisplay::updateFiltersGUI()
     specialCurveChain_graphic.setBypassed<2> (!settings.specialCurveEnable);
     specialCurveChain_graphic.setBypassed<3> (!settings.specialCurveEnable);
 
-    // TODO: This only needs to be done when a prepareToPlay is called
     // Set coefficients for special curve filters
-    const auto specialCurveCoeffs = getSpecialCurveCoeffs (sampleRate);
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> specialCurveCoeffs;
+    if (settings.specialCurve == SpecialCurve::BBC)
+    {
+        specialCurveCoeffs = getBBCcoeffs (audioProcessor.getSampleRate());
+    }
+    else if (settings.specialCurve == SpecialCurve::BBC_XTR_311)
+    {
+        specialCurveCoeffs = getXTRcoeffs (audioProcessor.getSampleRate());
+    }
     updateCoefficients (specialCurveChain_graphic.get<0>().coefficients, specialCurveCoeffs[0]);
     updateCoefficients (specialCurveChain_graphic.get<1>().coefficients, specialCurveCoeffs[1]);
     updateCoefficients (specialCurveChain_graphic.get<2>().coefficients, specialCurveCoeffs[2]);
