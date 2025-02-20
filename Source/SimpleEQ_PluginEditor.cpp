@@ -88,7 +88,7 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
         sliderBounds.getY(),
         sliderBounds.getWidth(),
         sliderBounds.getHeight(),
-        jmap (getValue(), range.getStart(), range.getEnd(), 0.0, 1.0),
+        getNormalisableRange().convertTo0to1 (getValue()),
         startAng,
         endAng,
         *this);
@@ -255,7 +255,7 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
         sliderBounds.getY(),
         sliderBounds.getWidth(),
         sliderBounds.getHeight(),
-        jmap (getValue(), range.getStart(), range.getEnd(), 0.0, 1.0),
+        getNormalisableRange().convertTo0to1 (getValue()),
         startAng,
         endAng,
         *this);
