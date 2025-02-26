@@ -9,7 +9,7 @@ void LookAndFeelShort::drawRotarySlider (juce::Graphics& g, const int x, const i
     const auto fill = slider.findColour (Slider::rotarySliderFillColourId);
 
     auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (16);
-    const auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
+    const auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.f;
     const auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle); // Angle corrosponding to the current value of the control
     const auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
     const auto arcRadius = radius - lineW * 0.5f;
@@ -79,8 +79,6 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
     constexpr auto startAng = degreesToRadians (180.f + 45.f);
     constexpr auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
 
-    const auto range = getRange();
-
     const auto sliderBounds = getSliderBounds();
 
     getLookAndFeel().drawRotarySlider (g,
@@ -95,7 +93,8 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 
     auto center = sliderBounds.toFloat().getCentre();
     center.setY (center.getY() - 13);
-    const auto radius = sliderBounds.getWidth() * 0.4f;
+
+    const auto radius = jmin (getSliderBounds().reduced (16).getWidth(), getSliderBounds().reduced (16).getHeight()) / 2.f;
 
     // The text will be dark grey if the control is bypassed
     if (isEnabled())
@@ -107,7 +106,7 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
         g.setColour (Colours::darkgrey);
     }
 
-    g.setFont (getTextHeight() * 1.f);
+    g.setFont (static_cast<float> (getTextHeight()));
 
     // Tic labels - min and max values for a continuous control, each value for a rotary switch
     const auto numChoices = labels.size();
@@ -120,45 +119,22 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 
         auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
 
-        // Some height corrections for certain controls - this might be unnecessary with some adjustments to how c is calculated and/or how the text is justified?
-        if (numChoices == 2)
-        {
-            c.y = c.y - 8;
-        }
-
-        if (title == "HP\nSlope\n(dB/oct.)" || title == "LP\nSlope\n(dB/oct.)")
-        {
-            if (i == 0 or i == 4)
-            {
-                c.y = c.y - 8;
-            }
-            if (i == 1)
-            {
-                c.y = c.y - 15;
-            }
-            if (i == 2)
-            {
-                c.y = c.y - 12;
-            }
-            if (i == 3)
-            {
-                c.y = c.y - 15;
-            }
-        }
-
         // Create rectangle for text bounds
         Rectangle<float> r;
         auto str = labels[i].label;
         r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), getTextHeight());
+        c.setY (c.getY() + 8);
         r.setCentre (c);
-        r.setY (r.getY() + getTextHeight());
 
         // Draw tic labels
+        auto test = g.getCurrentFont();
+        // g.setFont (9);
         g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
     }
 
     // Name of control
     Rectangle<float> r;
+    // g.setFont (14);
     r.setSize (getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
     r.setCentre (center);
     g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
@@ -167,6 +143,79 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 juce::Rectangle<int> RotarySliderWithLabelsShort::getSliderBounds() const
 {
     return getLocalBounds();
+}
+
+double RotarySliderWithLabelsShort::snapValue (double attemptedValue, DragMode dragMode)
+{
+    if (snap && snapValues != nullptr && !getCommandControlPressed())
+    {
+        double minVal = INFINITY;
+        int idxMin = 0;
+        for (auto idx = 0; idx < snapValues->size(); idx++)
+        {
+            const auto val = std::abs ((*snapValues)[idx] - attemptedValue);
+            if (val < minVal)
+            {
+                minVal = val;
+                idxMin = idx;
+            }
+        }
+
+        if (isMouseDrag) // and command/ctrl is NOT pressed and snap is set
+        {
+            return (*snapValues)[idxMin];
+        }
+
+        if (isMouseWheelMove) // and command/ctrl is NOT pressed and snap is set
+        {
+            // If this is coming within ~150ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side.
+            auto elapsedTime = juce::Time().currentTimeMillis() - getLastMouseWheelMove();
+            if (elapsedTime < 200)
+            {
+                return getValue();
+            }
+            setLastMouseWheelMove (juce::Time().currentTimeMillis());
+
+            // A single mouse wheel move is usually not enough to move the slider value so that it is closer to the next snap value. Instead, we look to see which way the slider is being moved and jump to the next snap value in that direction.
+            if (juce::approximatelyEqual ((*snapValues)[idxMin], getValue()), 2)
+            {
+                if (attemptedValue < (*snapValues)[idxMin])
+                {
+                    return (*snapValues)[idxMin - 1];
+                }
+                if (attemptedValue > (*snapValues)[idxMin])
+                {
+                    return (*snapValues)[idxMin + 1];
+                }
+            }
+            return (*snapValues)[idxMin];
+        }
+    }
+    return attemptedValue; // command/ctrl pressed, value entered in text box, or no snap values assigned
+}
+
+void RotarySliderWithLabelsShort::mouseDrag (const juce::MouseEvent& event)
+{
+    setIsMouseDrag (true);
+    if (event.mods == 24)
+    {
+        setCommandControlPressed (true);
+    }
+    Slider::mouseDrag (event);
+    setCommandControlPressed (false);
+    setIsMouseDrag (false);
+}
+
+void RotarySliderWithLabelsShort::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    setIsMouseWheelMove (true);
+    if (e.mods == 8)
+    {
+        setCommandControlPressed (true);
+    }
+    Slider::mouseWheelMove (e, wheel);
+    setCommandControlPressed (false);
+    setIsMouseWheelMove (false);
 }
 
 //=========================================================

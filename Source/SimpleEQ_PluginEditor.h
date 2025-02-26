@@ -413,9 +413,76 @@ struct RotarySliderWithLabelsShort : juce::Slider
     juce::Rectangle<int> getSliderBounds() const;
     static int getTextHeight() { return 14; }
 
+    double snapValue (double attemptedValue, DragMode dragMode) override;
+
+    void mouseDrag (const juce::MouseEvent& event) override;
+
+    void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+
+    void setCommandControlPressed (const bool isPressed)
+    {
+        commandControlPressed = isPressed;
+    }
+
+    bool getCommandControlPressed() const
+    {
+        return commandControlPressed;
+    }
+
+    void setSnap (const bool shouldSnap)
+    {
+        snap = shouldSnap;
+    }
+
+    void setSnapValues (const std::vector<double>* newSnapValues)
+    {
+        snapValues = newSnapValues;
+    }
+
+    const std::vector<double>* getSnapValues () const
+    {
+        return snapValues;
+    }
+
+    void setIsMouseDrag (const bool dragging)
+    {
+        isMouseDrag = dragging;
+    }
+
+    bool getIsMouseDrag() const
+    {
+        return isMouseDrag;
+    }
+
+    void setIsMouseWheelMove (const bool mouseWheelMoving)
+    {
+        isMouseWheelMove = mouseWheelMoving;
+    }
+
+    bool getIsMouseWheelMove() const
+    {
+        return isMouseWheelMove;
+    }
+
+    void setLastMouseWheelMove (const juce::int64 newTime)
+    {
+        lastMouseWheelMove = newTime;
+    }
+
+    juce::int64 getLastMouseWheelMove() const
+    {
+        return lastMouseWheelMove;
+    }
+
 private:
     Gui::colorPalette colors;
     LookAndFeelShort lnf;
+    bool snap { false };
+    const std::vector<double>* snapValues { nullptr };
+    bool commandControlPressed;
+    bool isMouseDrag;
+    bool isMouseWheelMove;
+    juce::int64 lastMouseWheelMove;
 };
 
 //=======================================================
@@ -636,5 +703,3 @@ inline int getMaxStringWidth (juce::Font font, juce::String text)
         maxLineWidth = currentLineWidth;
     return maxLineWidth;
 }
-
-
