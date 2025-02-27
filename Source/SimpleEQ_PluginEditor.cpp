@@ -99,11 +99,11 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
     // The text will be dark grey if the control is bypassed
     if (isEnabled())
     {
-        g.setColour (colors.textColor);
+        g.setColour (colors.textColor.withAlpha (currentAlpha));
     }
     else
     {
-        g.setColour (Colours::darkgrey);
+        g.setColour (Colours::darkgrey.withAlpha (currentAlpha));
     }
 
     g.setFont (static_cast<float> (getTextHeight()));
@@ -128,8 +128,16 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 
         // Draw tic labels
         auto test = g.getCurrentFont();
-        // g.setFont (9);
         g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
+    }
+
+    if (isEnabled())
+    {
+        g.setColour (colors.textColor);
+    }
+    else
+    {
+        g.setColour (Colours::darkgrey);
     }
 
     // Name of control
@@ -161,7 +169,7 @@ double RotarySliderWithLabelsShort::snapValue (double attemptedValue, DragMode d
             }
         }
 
-        if (isMouseDrag) // and command/ctrl is NOT pressed and snap is set
+        if (isMouseDrag || isMouseDown) // and command/ctrl is NOT pressed and snap is set
         {
             return (*snapValues)[idxMin];
         }
@@ -218,7 +226,144 @@ void RotarySliderWithLabelsShort::mouseWheelMove (const juce::MouseEvent& e, con
     setIsMouseWheelMove (false);
 }
 
+void RotarySliderWithLabelsShort::mouseDown (const juce::MouseEvent& event)
+{
+    setIsMouseDown (true);
+    if (event.mods == 24)
+    {
+        setCommandControlPressed (true);
+    }
+    Slider::mouseDown (event);
+    setCommandControlPressed (false);
+    setIsMouseDown (false);
+}
+
+void RotarySliderWithLabelsShort::mouseEnter (const juce::MouseEvent& event)
+{
+    Slider::mouseEnter (event);
+
+    if (legend != nullptr && isEnabled())
+    {
+        setAppearing (false);
+        startTimerHz (20);
+        legend->setVisible (true);
+        legend->setAppearing (true);
+        legend->startTimerHz (20);
+    }
+}
+void RotarySliderWithLabelsShort::mouseExit (const juce::MouseEvent& event)
+{
+    Slider::mouseExit (event);
+
+    if (legend != nullptr && isEnabled())
+    {
+        setAppearing (true);
+        startTimerHz (20);
+        legend->setAppearing (false);
+        legend->startTimerHz (20);
+    }
+}
+
+void RotarySliderWithLabelsShort::timerCallback()
+{
+    if (appearing)
+    {
+        currentAlpha = currentAlpha + 0.1f;
+        if (currentAlpha >= 1.0f)
+        {
+            currentAlpha = 1.0f;
+            stopTimer();
+        }
+    }
+    else
+    {
+        currentAlpha = currentAlpha - 0.1f;
+        if (currentAlpha <= 0)
+        {
+            currentAlpha = 0.f;
+            stopTimer();
+            return;
+        }
+    }
+    repaint();
+}
+
 //=========================================================
+
+void RotarySliderLegendComponent::paint (juce::Graphics& g)
+{
+    using namespace juce;
+
+    constexpr auto startAng = degreesToRadians (180.f + 45.f);
+    constexpr auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
+
+    const auto bounds = getLocalBounds();
+
+    auto center = bounds.toFloat().getCentre();
+    center.setY (center.getY() - 13);
+
+    const auto radius = jmin (bounds.reduced (16).getWidth(), bounds.reduced (16).getHeight()) / 2.f;
+
+    // The text will be dark grey if the control is bypassed
+    if (isEnabled())
+    {
+        g.setColour (colors.textColor.withAlpha (currentAlpha));
+    }
+    else
+    {
+        g.setColour (Colours::darkgrey.withAlpha (currentAlpha));
+    }
+
+    g.setFont (static_cast<float> (12));
+
+    for (int i = 0; i < labels.size(); ++i)
+    {
+        const auto pos = labels[i].pos;
+        jassert (0.f <= pos);
+
+        const auto ang = jmap (pos, 0.f, static_cast<float> (labels.size()) - 1.f, startAng, endAng);
+
+        auto c = center.getPointOnCircumference (radius - 2, radius - 6, ang);
+
+        // Create rectangle for text bounds
+        Rectangle<float> r;
+        auto str = labels[i].label;
+        r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), 14);
+        r.setCentre (c);
+
+
+
+        // Draw tic labels
+        g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
+    }
+}
+
+//=========================================================
+
+void RotarySliderLegendComponent::timerCallback()
+{
+    if (appearing)
+    {
+        currentAlpha = currentAlpha + 0.1f;
+        if (currentAlpha >= 1.0f)
+        {
+            currentAlpha = 1.0f;
+            stopTimer();
+        }
+    }
+    else
+    {
+        currentAlpha = currentAlpha - 0.1f;
+        if (currentAlpha <= 0)
+        {
+            currentAlpha = 0.f;
+            stopTimer();
+            setVisible (false);
+            return;
+        }
+    }
+    repaint();
+}
 
 void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y, const int width, const int height, const float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
 {

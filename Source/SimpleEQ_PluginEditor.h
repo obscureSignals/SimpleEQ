@@ -381,7 +381,39 @@ struct LookAndFeelShort : juce::LookAndFeel_V4
 private:
     Gui::colorPalette colors;
 };
-struct RotarySliderWithLabelsShort : juce::Slider
+
+struct RotarySliderLegendComponent final : juce::Component, juce::Timer
+{
+    explicit RotarySliderLegendComponent()
+    {
+        setInterceptsMouseClicks (false, false);
+    }
+    void paint (juce::Graphics& g) override;
+
+    // Tic labels and postions
+    struct LabelPos
+    {
+        float pos;
+        juce::String label;
+    };
+    juce::Array<LabelPos> labels;
+
+    void timerCallback() override;
+
+    void setAppearing (const bool isAppearing)
+    {
+        appearing = isAppearing;
+    }
+
+private:
+    Gui::colorPalette colors;
+    float currentAlpha = 0.f;
+    bool appearing = false; // !appearing = disappearing
+};
+
+//==============================================
+
+struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
 {
     explicit RotarySliderWithLabelsShort (const juce::String& unitSuffix) : juce::Slider (juce::Slider::SliderStyle::Rotary,
                                                                                 juce::Slider::TextEntryBoxPosition::TextBoxBelow)
@@ -419,6 +451,8 @@ struct RotarySliderWithLabelsShort : juce::Slider
 
     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
+    void mouseDown (const juce::MouseEvent& e) override;
+
     void setCommandControlPressed (const bool isPressed)
     {
         commandControlPressed = isPressed;
@@ -439,7 +473,7 @@ struct RotarySliderWithLabelsShort : juce::Slider
         snapValues = newSnapValues;
     }
 
-    const std::vector<double>* getSnapValues () const
+    const std::vector<double>* getSnapValues() const
     {
         return snapValues;
     }
@@ -464,6 +498,16 @@ struct RotarySliderWithLabelsShort : juce::Slider
         return isMouseWheelMove;
     }
 
+    void setIsMouseDown (const bool mouseDown)
+    {
+        isMouseDown = mouseDown;
+    }
+
+    bool getIsMouseDown() const
+    {
+        return isMouseDown;
+    }
+
     void setLastMouseWheelMove (const juce::int64 newTime)
     {
         lastMouseWheelMove = newTime;
@@ -474,6 +518,21 @@ struct RotarySliderWithLabelsShort : juce::Slider
         return lastMouseWheelMove;
     }
 
+    void setLegend (RotarySliderLegendComponent* legendToUse)
+    {
+        legend = legendToUse;
+    }
+
+    void mouseEnter (const juce::MouseEvent& event) override;
+    void mouseExit (const juce::MouseEvent& event) override;
+
+    void timerCallback() override;
+
+    void setAppearing (const bool isAppearing)
+    {
+        appearing = isAppearing;
+    }
+
 private:
     Gui::colorPalette colors;
     LookAndFeelShort lnf;
@@ -482,7 +541,11 @@ private:
     bool commandControlPressed;
     bool isMouseDrag;
     bool isMouseWheelMove;
+    bool isMouseDown;
     juce::int64 lastMouseWheelMove;
+    RotarySliderLegendComponent* legend = nullptr;
+    float currentAlpha = 1.f;
+    bool appearing = false; // !appearing = disappearing
 };
 
 //=======================================================
