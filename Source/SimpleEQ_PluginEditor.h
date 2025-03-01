@@ -468,12 +468,12 @@ struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
         snap = shouldSnap;
     }
 
-    void setSnapValues (const std::vector<double>* newSnapValues)
+    void setSnapValues (const std::vector<float>* newSnapValues)
     {
         snapValues = newSnapValues;
     }
 
-    const std::vector<double>* getSnapValues() const
+    const std::vector<float>* getSnapValues() const
     {
         return snapValues;
     }
@@ -537,7 +537,7 @@ private:
     Gui::colorPalette colors;
     LookAndFeelShort lnf;
     bool snap { false };
-    const std::vector<double>* snapValues { nullptr };
+    const std::vector<float>* snapValues { nullptr };
     bool commandControlPressed;
     bool isMouseDrag;
     bool isMouseWheelMove;
@@ -570,21 +570,21 @@ private:
 
 struct RotarySliderWithLabels : juce::Slider
 {
-    explicit RotarySliderWithLabels (const juce::String& unitSuffix) : juce::Slider (juce::Slider::SliderStyle::Rotary,
-                                                                           juce::Slider::TextEntryBoxPosition::TextBoxBelow)
+    explicit RotarySliderWithLabels (const juce::String& unitSuffix) : juce::Slider (Rotary, TextBoxBelow)
     {
         setLookAndFeel (&lnf);
         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
         setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display inivisible
         setColour (juce::Slider::textBoxTextColourId, colors.textColor);
         setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
-        // setSliderSnapsToMousePosition(false); // not available for rotary sliders :(
     }
 
     ~RotarySliderWithLabels() override
     {
         setLookAndFeel (nullptr);
     }
+
+    void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     // Tic labels and postions
     struct LabelPos
@@ -600,9 +600,20 @@ struct RotarySliderWithLabels : juce::Slider
     juce::Rectangle<int> getSliderBounds() const;
     static int getTextHeight() { return 14; }
 
+    void setLastMouseWheelMove (const juce::int64 newTime)
+    {
+        lastMouseWheelMove = newTime;
+    }
+
+    juce::int64 getLastMouseWheelMove() const
+    {
+        return lastMouseWheelMove;
+    }
+
 private:
     Gui::colorPalette colors;
     LookAndFeel lnf;
+    juce::int64 lastMouseWheelMove;
 };
 
 // ===================================================================

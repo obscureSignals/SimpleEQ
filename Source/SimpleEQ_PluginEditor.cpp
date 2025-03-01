@@ -96,40 +96,6 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 
     const auto radius = jmin (getSliderBounds().reduced (16).getWidth(), getSliderBounds().reduced (16).getHeight()) / 2.f;
 
-    // The text will be dark grey if the control is bypassed
-    if (isEnabled())
-    {
-        g.setColour (colors.textColor.withAlpha (currentAlpha));
-    }
-    else
-    {
-        g.setColour (Colours::darkgrey.withAlpha (currentAlpha));
-    }
-
-    g.setFont (static_cast<float> (getTextHeight()));
-
-    // Tic labels - min and max values for a continuous control, each value for a rotary switch
-    const auto numChoices = labels.size();
-    for (int i = 0; i < numChoices; ++i)
-    {
-        const auto pos = labels[i].pos;
-        jassert (0.f <= pos);
-
-        const auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
-
-        auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
-
-        // Create rectangle for text bounds
-        Rectangle<float> r;
-        auto str = labels[i].label;
-        r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), getTextHeight());
-        c.setY (c.getY() + 8);
-        r.setCentre (c);
-
-        // Draw tic labels
-        auto test = g.getCurrentFont();
-        g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
-    }
 
     if (isEnabled())
     {
@@ -138,6 +104,31 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
     else
     {
         g.setColour (Colours::darkgrey);
+    }
+
+    // g.setFont (static_cast<float> (getTextHeight()));
+
+    g.setFont (13);
+    const auto numChoices = labels.size();
+    for (int i = 0; i < numChoices; ++i)
+    {
+        const auto pos = labels[i].pos;
+        jassert (0.f <= pos);
+
+        const auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
+
+        auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 2.f, ang);
+
+        // Create rectangle for text bounds
+        Rectangle<float> r;
+        auto str = labels[i].label;
+        r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), getTextHeight());
+        c.setY (c.getY() + 4);
+        r.setCentre (c);
+
+        // Draw tic labels
+        auto test = g.getCurrentFont();
+        g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
     }
 
     // Name of control
@@ -176,16 +167,16 @@ double RotarySliderWithLabelsShort::snapValue (double attemptedValue, DragMode d
 
         if (isMouseWheelMove) // and command/ctrl is NOT pressed and snap is set
         {
-            // If this is coming within ~150ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side.
+            // If this is coming within ~160ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side.
             auto elapsedTime = juce::Time().currentTimeMillis() - getLastMouseWheelMove();
-            if (elapsedTime < 200)
+            if (elapsedTime < 160)
             {
                 return getValue();
             }
             setLastMouseWheelMove (juce::Time().currentTimeMillis());
 
-            // A single mouse wheel move is usually not enough to move the slider value so that it is closer to the next snap value. Instead, we look to see which way the slider is being moved and jump to the next snap value in that direction.
-            if (juce::approximatelyEqual ((*snapValues)[idxMin], getValue()), 2)
+            // A single mouse wheel move is usually not enough to move the slider value far enough so that it snaps to the next value. Instead, we look to see which way the slider is being moved and jump to the next snap value in that direction.
+            if (juce::approximatelyEqual ((*snapValues)[idxMin], static_cast<float>(getValue())), 2)
             {
                 if (attemptedValue < (*snapValues)[idxMin])
                 {
@@ -244,8 +235,8 @@ void RotarySliderWithLabelsShort::mouseEnter (const juce::MouseEvent& event)
 
     if (legend != nullptr && isEnabled())
     {
-        setAppearing (false);
-        startTimerHz (20);
+        // setAppearing (false);
+        // startTimerHz (20);
         legend->setVisible (true);
         legend->setAppearing (true);
         legend->startTimerHz (20);
@@ -257,8 +248,8 @@ void RotarySliderWithLabelsShort::mouseExit (const juce::MouseEvent& event)
 
     if (legend != nullptr && isEnabled())
     {
-        setAppearing (true);
-        startTimerHz (20);
+        // setAppearing (true);
+        // startTimerHz (20);
         legend->setAppearing (false);
         legend->startTimerHz (20);
     }
@@ -266,26 +257,25 @@ void RotarySliderWithLabelsShort::mouseExit (const juce::MouseEvent& event)
 
 void RotarySliderWithLabelsShort::timerCallback()
 {
-    if (appearing)
-    {
-        currentAlpha = currentAlpha + 0.1f;
-        if (currentAlpha >= 1.0f)
-        {
-            currentAlpha = 1.0f;
-            stopTimer();
-        }
-    }
-    else
-    {
-        currentAlpha = currentAlpha - 0.1f;
-        if (currentAlpha <= 0)
-        {
-            currentAlpha = 0.f;
-            stopTimer();
-            return;
-        }
-    }
-    repaint();
+    // if (appearing)
+    // {
+    //     currentAlpha = currentAlpha + 0.1f;
+    //     if (currentAlpha >= 1.0f)
+    //     {
+    //         currentAlpha = 1.0f;
+    //         stopTimer();
+    //     }
+    // }
+    // else
+    // {
+    //     currentAlpha = currentAlpha - 0.1f;
+    //     if (currentAlpha <= 0)
+    //     {
+    //         currentAlpha = 0.f;
+    //         stopTimer();
+    //         return;
+    //     }
+    // }
 }
 
 //=========================================================
@@ -314,9 +304,9 @@ void RotarySliderLegendComponent::paint (juce::Graphics& g)
         g.setColour (Colours::darkgrey.withAlpha (currentAlpha));
     }
 
-    g.setFont (static_cast<float> (12));
+    g.setFont (13.f);
 
-    for (int i = 0; i < labels.size(); ++i)
+    for (int i = 1; i < labels.size() - 1; ++i)
     {
         const auto pos = labels[i].pos;
         jassert (0.f <= pos);
@@ -330,8 +320,6 @@ void RotarySliderLegendComponent::paint (juce::Graphics& g)
         auto str = labels[i].label;
         r.setSize (GlyphArrangement::getStringWidth (g.getCurrentFont(), str), 14);
         r.setCentre (c);
-
-
 
         // Draw tic labels
         g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
@@ -529,6 +517,18 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
     return getLocalBounds();
 }
 
+void RotarySliderWithLabels::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    // If this is coming within ~160ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side for controls with stops
+    auto elapsedTime = juce::Time().currentTimeMillis() - getLastMouseWheelMove();
+    if (elapsedTime < 160)
+    {
+        return;
+    }
+    setLastMouseWheelMove (juce::Time().currentTimeMillis());
+    Slider::mouseWheelMove (e, wheel);
+}
+
 //===========================================// Spectrum Display
 
 SpectrumDisplay::SpectrumDisplay (PlayBackEQAudioProcessor& p) : audioProcessor (p),
@@ -724,7 +724,7 @@ void SpectrumDisplay::updateResponseCurve()
         // Find the frequency asscoiated with this pixel in horizontal dimension of responseArea
         const auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
 
-        // Get the magnitude repsonse at this frequendcy from each filter and multiply them together
+        // Get the magnitude repsonse at this frequency from each filter and multiply them together
         if (!trebleChain_graphic.isBypassed<0>())
         {
             mag *= trebleChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
