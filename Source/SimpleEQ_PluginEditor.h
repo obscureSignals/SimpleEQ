@@ -538,11 +538,11 @@ private:
     LookAndFeelShort lnf;
     bool snap { false };
     const std::vector<float>* snapValues { nullptr };
-    bool commandControlPressed;
-    bool isMouseDrag;
-    bool isMouseWheelMove;
-    bool isMouseDown;
-    juce::int64 lastMouseWheelMove;
+    bool commandControlPressed = false;
+    bool isMouseDrag = false;
+    bool isMouseWheelMove = false;
+    bool isMouseDown = false;
+    juce::int64 lastMouseWheelMove = 0;
     RotarySliderLegendComponent* legend = nullptr;
     float currentAlpha = 1.f;
     bool appearing = false; // !appearing = disappearing
@@ -613,20 +613,20 @@ struct RotarySliderWithLabels : juce::Slider
 private:
     Gui::colorPalette colors;
     LookAndFeel lnf;
-    juce::int64 lastMouseWheelMove;
+    juce::int64 lastMouseWheelMove = 0;
 };
 
 // ===================================================================
 
 struct PathProducer
 {
-    PathProducer (StereoSummingSampleFifo<PlayBackEQAudioProcessor::BlockType>& sssf, PlayBackEQAudioProcessor& p, const float negativeInfinity) : Fifo (&sssf), audioProcessor (p), FFTDataGenerator (negativeInfinity), pathGenerator (negativeInfinity), negativeInfinity (negativeInfinity)
+    PathProducer (StereoSummingSampleFifo<PlayBackEQAudioProcessor::BlockType>& sssf, PlayBackEQAudioProcessor& p, const float negativeInfinity) : Fifo (&sssf), audioProcessor (p), fftDataGenerator (negativeInfinity), pathGenerator (negativeInfinity), negativeInfinity (negativeInfinity)
     {
         double sampleRate = audioProcessor.getSampleRate();
         // Set up the FFTDataGenerator to operate on at ~ 1/6 of a second of time domain data at a time
         int fftOrder = ceil (log2 (sampleRate / 6));
-        FFTDataGenerator.changeOrder (fftOrder);
-        monoBuffer.setSize (1, FFTDataGenerator.getFFTSize());
+        fftDataGenerator.changeOrder (fftOrder);
+        monoBuffer.setSize (1, fftDataGenerator.getFFTSize());
     }
 
     void process (juce::Rectangle<float> fftBounds, double sampleRate);
@@ -640,7 +640,7 @@ private:
 
     juce::AudioBuffer<float> monoBuffer; // Will hold time domain data from Fifo to pass to FFTDataGenerator
 
-    FFTDataGenerator<std::vector<float>> FFTDataGenerator;
+    FFTDataGenerator<std::vector<float>> fftDataGenerator;
 
     AnalyzerPathGenerator<juce::Path> pathGenerator;
 

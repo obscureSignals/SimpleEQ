@@ -1158,16 +1158,16 @@ void PathProducer::process (const juce::Rectangle<float> fftBounds, const double
                 tempIncomingBuffer.getReadPointer (0, 0), // Source
                 size); // Number of values
 
-            FFTDataGenerator.produceFFTDataForRendering (monoBuffer, newFFTOrder);
+            fftDataGenerator.produceFFTDataForRendering (monoBuffer, newFFTOrder);
         }
     }
 
-    const auto fftSize = FFTDataGenerator.getFFTSize();
+    const auto fftSize = fftDataGenerator.getFFTSize();
     const auto binWidth = sampleRate / static_cast<double> (fftSize);
 
-    while (FFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+    while (fftDataGenerator.getNumAvailableFFTDataBlocks() > 0)
     {
-        if (FFTDataGenerator.getFFTData (fftData))
+        if (fftDataGenerator.getFFTData (fftData))
         {
             pathGenerator.generatePath (fftData, fftBounds, fftSize, binWidth);
         }
