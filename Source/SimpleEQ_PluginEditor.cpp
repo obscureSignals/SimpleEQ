@@ -196,7 +196,7 @@ double RotarySliderWithLabelsShort::snapValue (double attemptedValue, DragMode d
 void RotarySliderWithLabelsShort::mouseDrag (const juce::MouseEvent& event)
 {
     setIsMouseDrag (true);
-    if (event.mods == 24)
+    if (event.mods == 24 or event.mods == 18)
     {
         setCommandControlPressed (true);
     }
@@ -208,7 +208,7 @@ void RotarySliderWithLabelsShort::mouseDrag (const juce::MouseEvent& event)
 void RotarySliderWithLabelsShort::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
 {
     setIsMouseWheelMove (true);
-    if (e.mods == 8)
+    if (e.mods == 8 or e.mods == 2)
     {
         setCommandControlPressed (true);
     }
@@ -220,7 +220,7 @@ void RotarySliderWithLabelsShort::mouseWheelMove (const juce::MouseEvent& e, con
 void RotarySliderWithLabelsShort::mouseDown (const juce::MouseEvent& event)
 {
     setIsMouseDown (true);
-    if (event.mods == 24)
+    if (event.mods == 24 or event.mods == 18)
     {
         setCommandControlPressed (true);
     }
