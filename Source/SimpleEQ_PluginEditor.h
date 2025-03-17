@@ -53,7 +53,7 @@ struct FrequencyLabelsComponent final : juce::Component
                 str << "k";
             str << "Hz";
 
-            const auto textWidth = g.getCurrentFont().getStringWidth (str);
+            const auto textWidth = juce::GlyphArrangement::getStringWidthInt(g.getCurrentFont(), str);
 
             juce::Rectangle<int> r;
 
@@ -187,7 +187,7 @@ struct FFTDataGenerator
     }
     [[nodiscard]] int getFFTSize() const { return 1 << fftOrder; } // FFT size is 2^fftOrder
     [[nodiscard]] int getNumAvailableFFTDataBlocks() const { return fftDataFifo.getNumAvailableForReading(); }
-    bool getFFTData (BlockType& fftData) { return fftDataFifo.pull (fftData); }
+    bool getFFTData (BlockType& dataOut) { return fftDataFifo.pull (dataOut); }
 
 private:
     int fftOrder;
@@ -225,18 +225,18 @@ struct AnalyzerPathGenerator
     //       - left side is 0Hz
     //       - right side is 20kHz
     //       - top is 0dB
-    //       - bottom (+ 6) is negative infintity dB
+    //       - bottom (+ 6) is negative infinity dB
     //    binWidth is width of FFT bins in Hz = sampleRate/fftSize
     void generatePath (const std::vector<float>& renderData,
         const juce::Rectangle<float> fftBounds,
-        int fftSize,
+        int fftSizeParam,
         const float binWidth)
     {
         auto top = fftBounds.getY();
         auto bottom = fftBounds.getHeight();
-        auto width = fftBounds.getWidth();
+        const auto width = fftBounds.getWidth();
 
-        int numBins = ceil (20000.f / binWidth); // Only build the path up to 20kHz
+        const int numBins = ceil (20000.f / binWidth); // Only build the path up to 20kHz
 
         PathType pSpline; // Spline path
 
@@ -247,13 +247,13 @@ struct AnalyzerPathGenerator
         pSpline.preallocateSpace (3 * static_cast<int> (fftBounds.getWidth()));
 
         // create horizontal map from dB value to pixel space
-        const auto negInf = negativeInfinity;
+        const auto negInf = this->negativeInfinity;
         auto map = [bottom, top, negInf] (const float v) {
             return juce::jmap (v, negInf, 0.f, (bottom + 6.f), top);
         };
 
         // Height of bin
-        float prevY = NAN; // Height of previous bin
+        float prevY = -1; // Height of previous bin
 
         // A 'run' is when more than one frequency is mapping to the same pixel in the horizontal axis
         // This will happen at higher frequencies where the bins are close together because of the log scale
@@ -261,13 +261,13 @@ struct AnalyzerPathGenerator
         // We run a 1-point delay at all times when assigning coordinates to point arrays in order to catch runs
         // If we are in a run, we wait until the end of the run to assign the value to the point array
 
-        float prevBinX = NAN; // Previous bin's horizontal coordinate
+        float prevBinX = -1; // Previous bin's horizontal coordinate
         int runIdx = 0; // How many bins in the run so far
         bool runFlag = false; // Are we in a run
         bool lastFlag = false; // Last bin
         float minRunY = bottom + 6; // Minimum of values in run
 
-        bool firstFlag = true; // We don't add the first prevY to our point array becuase it doesn't exist yet
+        bool firstFlag = true; // We don't add the first prevY to our point array because it doesn't exist yet
 
         // Fill point arrays
         // Start at idx 1, because 0 is 0Hz which maps to -inf because of log scale
@@ -282,10 +282,10 @@ struct AnalyzerPathGenerator
 
             if (!std::isnan (y) && !std::isinf (y)) // There should not be NaNs or infs
             {
-                auto binFreq = binNum * binWidth; // Frequency of bin in Hz
-                auto normalizedBinX = juce::mapFromLog10 (binFreq, 20.f, 20000.f); // Normalized value (0-1) for horizontal coordinate
-                float binX = std::floor (normalizedBinX * width); // Horizontal coordinate in pixels
-                if (binX != prevBinX)
+                const auto binFreq = binNum * binWidth; // Frequency of bin in Hz
+                const auto normalizedBinX = juce::mapFromLog10 (binFreq, 20.f, 20000.f); // Normalized value (0-1) for horizontal coordinate
+                const float binX = std::floor (normalizedBinX * width); // Horizontal coordinate in pixels
+                if (!juce::approximatelyEqual(binX,prevBinX))
                 { // If the horizontal coordinate is not the same as it was for the last bin
                     if (runFlag or lastFlag)
                     { // If run flag or the last flag are tripped, this must be the end of a run
@@ -332,7 +332,7 @@ struct AnalyzerPathGenerator
         dpoints.add ({ static_cast<double> (prevBinX), static_cast<double> (prevY) });
 
         // Spline interpolate points
-        gin::Spline spline (dpoints);
+        const gin::Spline spline (dpoints);
         pSpline.startNewSubPath (points.getFirst().toFloat());
         for (auto x1 = static_cast<int> (points.getFirst().getX()); x1 < static_cast<int> (points.getLast().getX()); x1++)
         {
@@ -344,6 +344,13 @@ struct AnalyzerPathGenerator
         pSpline.lineTo (points.getLast().getX(), bottom + 10.f);
         pSpline.lineTo (points.getFirst().getX(), bottom + 10.f);
         pSpline.lineTo (points.getFirst().toFloat());
+
+        // PathType pSplineTest; // Spline path
+        // pSplineTest.startNewSubPath (fftBounds.getBottomLeft());
+        // pSplineTest.lineTo (fftBounds.getTopLeft());
+        // pSplineTest.lineTo (fftBounds.getTopRight());
+        // pSplineTest.lineTo (fftBounds.getBottomRight());
+        // pSplineTest.lineTo (fftBounds.getBottomLeft());
 
         // Push path to path Fifo
         splinePathFifo.push (pSpline);
@@ -361,7 +368,7 @@ struct AnalyzerPathGenerator
 
 private:
     Fifo<PathType> splinePathFifo;
-    const float negativeInfinity;
+    const float negativeInfinity = -80.f;
 };
 
 //==============================================
@@ -390,7 +397,7 @@ struct RotarySliderLegendComponent final : juce::Component, juce::Timer
     }
     void paint (juce::Graphics& g) override;
 
-    // Tic labels and postions
+    // Tic labels and positions
     struct LabelPos
     {
         float pos;
@@ -420,7 +427,7 @@ struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
     {
         setLookAndFeel (&lnf);
         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display inivisible
+        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
         setColour (juce::Slider::textBoxTextColourId, colors.textColor);
         setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
         // setSliderSnapsToMousePosition(false); // not available for rotary sliders :(
@@ -431,7 +438,7 @@ struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
         setLookAndFeel (nullptr);
     }
 
-    // Tic labels and postions
+    // Tic labels and positions
     struct LabelPos
     {
         float pos;
@@ -574,7 +581,7 @@ struct RotarySliderWithLabels : juce::Slider
     {
         setLookAndFeel (&lnf);
         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display inivisible
+        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
         setColour (juce::Slider::textBoxTextColourId, colors.textColor);
         setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
     }
@@ -586,7 +593,7 @@ struct RotarySliderWithLabels : juce::Slider
 
     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
-    // Tic labels and postions
+    // Tic labels and positions
     struct LabelPos
     {
         float pos;
@@ -704,7 +711,7 @@ struct ResponseCurveComponent final : juce::Component,
 
     void resized() override;
 
-    void updateReponse()
+    void updateResponse()
     {
         spectrumDisplay.resized();
         repaint();
@@ -744,7 +751,7 @@ private:
     float freq {}, mag {};
     int mouseX {}, mouseY {};
 
-    juce::Component coordinateComponent; // Offset so that coordinate display corrosponds to very point of mouse
+    juce::Component coordinateComponent; // Offset so that coordinate display corresponds to very point of mouse
 
     int refreshRate { 60 };
     // For overlaying multiple paths with some weighted transparency - might be useful at some point

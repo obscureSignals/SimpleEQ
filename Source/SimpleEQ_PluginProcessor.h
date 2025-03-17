@@ -128,7 +128,6 @@ struct StereoSummingSampleFifo
     bool getAudioBuffer (BlockType& buf) { return audioBufferFifo.pull (buf); }
 
 private:
-    Channel channelToUse;
     int fifoIndex = 0;
     Fifo<BlockType> audioBufferFifo;
     BlockType bufferToFill;

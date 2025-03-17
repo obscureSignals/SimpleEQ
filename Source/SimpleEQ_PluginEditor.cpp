@@ -72,7 +72,7 @@ void LookAndFeelShort::drawRotarySlider (juce::Graphics& g, const int x, const i
 
 void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
 {
-    TRACE_COMPONENT();
+    // TRACE_COMPONENT();
 
     using namespace juce;
 
@@ -421,7 +421,7 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y,
 
 void RotarySliderWithLabels::paint (juce::Graphics& g)
 {
-    TRACE_COMPONENT();
+    // TRACE_COMPONENT();
 
     using namespace juce;
 
@@ -546,7 +546,7 @@ void SpectrumDisplay::pathProducerProcess (const juce::Rectangle<float> fftBound
 
 void SpectrumDisplay::paint (juce::Graphics& g)
 {
-    TRACE_COMPONENT();
+    // TRACE_COMPONENT();
 
     using namespace juce;
 
@@ -845,8 +845,6 @@ void ResponseCurveComponent::timerCallback()
 
     const auto fftBounds = getAnalysisArea().toFloat();
 
-    spectrumDisplay.setBounds (getAnalysisArea());
-
     spectrumDisplay.pathProducerProcess (fftBounds);
 
     if (parametersChanged.compareAndSetBool (false, true))
@@ -860,7 +858,7 @@ void ResponseCurveComponent::timerCallback()
 
 void ResponseCurveComponent::paint (juce::Graphics& g)
 {
-    TRACE_COMPONENT();
+    // TRACE_COMPONENT();
 
     // g.fillAll (juce::Colours::black);
     drawBackgroundGrid (g);
@@ -870,7 +868,7 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
 
 void ResponseCurveComponent::paintOverChildren (juce::Graphics& g)
 {
-    TRACE_COMPONENT();
+    // TRACE_COMPONENT();
 
     if (isMouseOverAnalysisArea)
     {
@@ -1119,6 +1117,8 @@ void ResponseCurveComponent::resized()
     auto coordinateBounds = getAnalysisArea();
     coordinateBounds.translate (2, 0);
     coordinateComponent.setBounds (coordinateBounds);
+    spectrumDisplay.setBounds (getAnalysisArea());
+
     //    responseCurve.preallocateSpace(getWidth() * 3);
 }
 
