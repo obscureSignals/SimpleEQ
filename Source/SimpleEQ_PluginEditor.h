@@ -253,7 +253,7 @@ struct AnalyzerPathGenerator
         };
 
         // Height of bin
-        float prevY = -1; // Height of previous bin
+        float prevY = -1; // Height of previous bin - set to impossible value
 
         // A 'run' is when more than one frequency is mapping to the same pixel in the horizontal axis
         // This will happen at higher frequencies where the bins are close together because of the log scale
