@@ -641,7 +641,7 @@ void SpectrumDisplay::updateFiltersGUI()
     }
 
     // get low pass coefficients
-    const auto lpfcoeffsPtr = getLowPasscoeffs (settings, audioProcessor.getSampleRate());
+    const auto lpfcoeffsPtr = getLowPassCoeffs (settings, audioProcessor.getSampleRate());
 
     // apply coefficients to filters depending on slope
     LPChain_graphic.setBypassed<0> (true);
