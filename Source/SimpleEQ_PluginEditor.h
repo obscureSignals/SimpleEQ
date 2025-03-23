@@ -345,13 +345,6 @@ struct AnalyzerPathGenerator
         pSpline.lineTo (points.getFirst().getX(), bottom + 10.f);
         pSpline.lineTo (points.getFirst().toFloat());
 
-        // PathType pSplineTest; // Spline path
-        // pSplineTest.startNewSubPath (fftBounds.getBottomLeft());
-        // pSplineTest.lineTo (fftBounds.getTopLeft());
-        // pSplineTest.lineTo (fftBounds.getTopRight());
-        // pSplineTest.lineTo (fftBounds.getBottomRight());
-        // pSplineTest.lineTo (fftBounds.getBottomLeft());
-
         // Push path to path Fifo
         splinePathFifo.push (pSpline);
     }
@@ -389,34 +382,34 @@ private:
     Gui::ColorPalette colors;
 };
 
-struct RotarySliderLegendComponent final : juce::Component, juce::Timer
-{
-    explicit RotarySliderLegendComponent()
-    {
-        setInterceptsMouseClicks (false, false);
-    }
-    void paint (juce::Graphics& g) override;
-
-    // Tic labels and positions
-    struct LabelPos
-    {
-        float pos;
-        juce::String label;
-    };
-    juce::Array<LabelPos> labels;
-
-    void timerCallback() override;
-
-    void setAppearing (const bool isAppearing)
-    {
-        appearing = isAppearing;
-    }
-
-private:
-    Gui::ColorPalette colors;
-    float currentAlpha = 0.f;
-    bool appearing = false; // !appearing = disappearing
-};
+// struct RotarySliderLegendComponent final : juce::Component, juce::Timer
+// {
+//     explicit RotarySliderLegendComponent()
+//     {
+//         setInterceptsMouseClicks (false, false);
+//     }
+//     void paint (juce::Graphics& g) override;
+//
+//     // Tic labels and positions
+//     struct LabelPos
+//     {
+//         float pos;
+//         juce::String label;
+//     };
+//     juce::Array<LabelPos> labels;
+//
+//     void timerCallback() override;
+//
+//     void setAppearing (const bool isAppearing)
+//     {
+//         appearing = isAppearing;
+//     }
+//
+// private:
+//     Gui::ColorPalette colors;
+//     float currentAlpha = 0.f;
+//     bool appearing = false; // !appearing = disappearing
+// };
 
 //==============================================
 
@@ -557,73 +550,6 @@ private:
 
 //=======================================================
 
-// struct LookAndFeel : juce::LookAndFeel_V4
-// {
-//     void drawRotarySlider (juce::Graphics&,
-//         int x,
-//         int y,
-//         int width,
-//         int height,
-//         float sliderPos,
-//         float rotaryStartAngle,
-//         float rotaryEndAngle,
-//         juce::Slider&) override;
-//
-// private:
-//     Gui::ColorPalette colors;
-// };
-
-//=================================================
-
-// struct RotarySliderTall : juce::Slider
-// {
-//     explicit RotarySliderTall (const juce::String& unitSuffix) : juce::Slider (Rotary, TextBoxBelow)
-//     {
-//         setLookAndFeel (&lnf);
-//         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
-//         setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
-//         setColour (juce::Slider::textBoxTextColourId, colors.textColor);
-//         setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
-//     }
-//
-//     ~RotarySliderTall() override
-//     {
-//         setLookAndFeel (nullptr);
-//     }
-//
-//     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
-//
-//     // Tic labels and positions
-//     struct LabelPos
-//     {
-//         float pos;
-//         juce::String label;
-//     };
-//     juce::Array<LabelPos> labels;
-//
-//     juce::String title;
-//
-//     void paint (juce::Graphics& g) override;
-//     juce::Rectangle<int> getSliderBounds() const;
-//     static int getTextHeight() { return 14; }
-//
-//     void setLastMouseWheelMove (const juce::int64 newTime)
-//     {
-//         lastMouseWheelMove = newTime;
-//     }
-//
-//     juce::int64 getLastMouseWheelMove() const
-//     {
-//         return lastMouseWheelMove;
-//     }
-//
-// private:
-//     Gui::ColorPalette colors;
-//     LookAndFeel lnf;
-//     juce::int64 lastMouseWheelMove = 0;
-// };
-
-// ===================================================================
 
 struct PathProducer
 {
