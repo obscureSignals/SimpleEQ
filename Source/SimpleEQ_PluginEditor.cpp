@@ -497,7 +497,7 @@ void RotarySliderWithLabels::paint (juce::Graphics& g)
         // Create rectangle for text bounds
         Rectangle<float> r;
         auto str = labels[i].label;
-        r.setSize (GlyphArrangement::getStringWidth (15, str), getTextHeight());
+        r.setSize (GlyphArrangement::getStringWidth (18, str), getTextHeight());
         r.setCentre (c);
         r.setY (r.getY() + getTextHeight());
 
@@ -799,7 +799,7 @@ void SpectrumDisplay::resized()
 
 //===========================================// Response Curve
 
-ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p, Gui::PresetPanel& pp) : audioProcessor (p), presetPanel (pp), spectrumDisplay (audioProcessor)
+ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p, Gui::TopPanel& pp) : audioProcessor (p), presetPanel (pp), spectrumDisplay (audioProcessor)
 {
     // setOpaque (true);
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
