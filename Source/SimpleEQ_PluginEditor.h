@@ -557,71 +557,71 @@ private:
 
 //=======================================================
 
-struct LookAndFeel : juce::LookAndFeel_V4
-{
-    void drawRotarySlider (juce::Graphics&,
-        int x,
-        int y,
-        int width,
-        int height,
-        float sliderPos,
-        float rotaryStartAngle,
-        float rotaryEndAngle,
-        juce::Slider&) override;
-
-private:
-    Gui::ColorPalette colors;
-};
+// struct LookAndFeel : juce::LookAndFeel_V4
+// {
+//     void drawRotarySlider (juce::Graphics&,
+//         int x,
+//         int y,
+//         int width,
+//         int height,
+//         float sliderPos,
+//         float rotaryStartAngle,
+//         float rotaryEndAngle,
+//         juce::Slider&) override;
+//
+// private:
+//     Gui::ColorPalette colors;
+// };
 
 //=================================================
 
-struct RotarySliderWithLabels : juce::Slider
-{
-    explicit RotarySliderWithLabels (const juce::String& unitSuffix) : juce::Slider (Rotary, TextBoxBelow)
-    {
-        setLookAndFeel (&lnf);
-        setTextValueSuffix (unitSuffix); // set unit suffixes for value display
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
-        setColour (juce::Slider::textBoxTextColourId, colors.textColor);
-        setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
-    }
-
-    ~RotarySliderWithLabels() override
-    {
-        setLookAndFeel (nullptr);
-    }
-
-    void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
-
-    // Tic labels and positions
-    struct LabelPos
-    {
-        float pos;
-        juce::String label;
-    };
-    juce::Array<LabelPos> labels;
-
-    juce::String title;
-
-    void paint (juce::Graphics& g) override;
-    juce::Rectangle<int> getSliderBounds() const;
-    static int getTextHeight() { return 14; }
-
-    void setLastMouseWheelMove (const juce::int64 newTime)
-    {
-        lastMouseWheelMove = newTime;
-    }
-
-    juce::int64 getLastMouseWheelMove() const
-    {
-        return lastMouseWheelMove;
-    }
-
-private:
-    Gui::ColorPalette colors;
-    LookAndFeel lnf;
-    juce::int64 lastMouseWheelMove = 0;
-};
+// struct RotarySliderTall : juce::Slider
+// {
+//     explicit RotarySliderTall (const juce::String& unitSuffix) : juce::Slider (Rotary, TextBoxBelow)
+//     {
+//         setLookAndFeel (&lnf);
+//         setTextValueSuffix (unitSuffix); // set unit suffixes for value display
+//         setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
+//         setColour (juce::Slider::textBoxTextColourId, colors.textColor);
+//         setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
+//     }
+//
+//     ~RotarySliderTall() override
+//     {
+//         setLookAndFeel (nullptr);
+//     }
+//
+//     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+//
+//     // Tic labels and positions
+//     struct LabelPos
+//     {
+//         float pos;
+//         juce::String label;
+//     };
+//     juce::Array<LabelPos> labels;
+//
+//     juce::String title;
+//
+//     void paint (juce::Graphics& g) override;
+//     juce::Rectangle<int> getSliderBounds() const;
+//     static int getTextHeight() { return 14; }
+//
+//     void setLastMouseWheelMove (const juce::int64 newTime)
+//     {
+//         lastMouseWheelMove = newTime;
+//     }
+//
+//     juce::int64 getLastMouseWheelMove() const
+//     {
+//         return lastMouseWheelMove;
+//     }
+//
+// private:
+//     Gui::ColorPalette colors;
+//     LookAndFeel lnf;
+//     juce::int64 lastMouseWheelMove = 0;
+// };
 
 // ===================================================================
 
@@ -759,28 +759,3 @@ private:
     //    int numPaths = 10;
     //    int pathCount = 0;
 };
-
-inline int getMaxStringWidth (juce::Font font, juce::String text)
-{
-    juce::String currentLineStr;
-    int maxLineWidth = 0;
-
-    for (int idx = 0; idx < text.length(); ++idx) // Run through each character
-    {
-        if (text[idx] == '\n') // We hit a line break
-        {
-            auto currentLineWidth = juce::GlyphArrangement::getStringWidthInt (font, currentLineStr);
-            if (currentLineWidth > maxLineWidth)
-                maxLineWidth = currentLineWidth;
-            currentLineStr.clear();
-        }
-        else
-        {
-            currentLineStr += text[idx];
-        }
-    }
-    auto currentLineWidth = juce::GlyphArrangement::getStringWidthInt (font, currentLineStr); // last line
-    if (currentLineWidth > maxLineWidth)
-        maxLineWidth = currentLineWidth;
-    return maxLineWidth;
-}

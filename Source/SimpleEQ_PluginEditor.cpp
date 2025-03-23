@@ -1,5 +1,6 @@
 
 #include "SimpleEQ_PluginEditor.h"
+#include "../../Gui/GetMaxStringWidth.h"
 
 void LookAndFeelShort::drawRotarySlider (juce::Graphics& g, const int x, const int y, const int width, const int height, const float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
 {
@@ -134,7 +135,7 @@ void RotarySliderWithLabelsShort::paint (juce::Graphics& g)
     // Name of control
     Rectangle<float> r;
     // g.setFont (14);
-    r.setSize (getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
+    r.setSize (Gui::getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
     r.setCentre (center);
     g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
 }
@@ -353,181 +354,181 @@ void RotarySliderLegendComponent::timerCallback()
     repaint();
 }
 
-void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y, const int width, const int height, const float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
-{
-    using namespace juce;
-
-    const auto outline = slider.findColour (Slider::rotarySliderOutlineColourId);
-    const auto fill = slider.findColour (Slider::rotarySliderFillColourId);
-
-    const auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (16);
-
-    const auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
-    const auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle); // Angle corrosponding to the current value of the control
-    const auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
-    const auto arcRadius = radius - lineW * 0.5f;
-
-    // This arc spans the angles corrosponding the full range of possible values
-    Path backgroundArc;
-    backgroundArc.addCentredArc (bounds.getCentreX(),
-        bounds.getCentreY(),
-        arcRadius,
-        arcRadius,
-        0.0f,
-        rotaryStartAngle,
-        rotaryEndAngle,
-        true);
-
-    g.setColour (outline);
-    g.strokePath (backgroundArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
-
-    // This arc is the portion of the arc that is below the current value angle
-    Path valueArc;
-    valueArc.addCentredArc (bounds.getCentreX(),
-        bounds.getCentreY(),
-        arcRadius,
-        arcRadius,
-        0.0f,
-        rotaryStartAngle,
-        toAngle,
-        true);
-    g.setColour (fill);
-    g.strokePath (valueArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
-
-    // The thumb is a section of the background arc
-    Path thumbArc;
-    thumbArc.addCentredArc (bounds.getCentreX(),
-        bounds.getCentreY(),
-        arcRadius,
-        arcRadius,
-        0.0f,
-        toAngle - 0.18f,
-        toAngle + 0.18f,
-        true);
-
-    // If control is bypassed, make the thumb color dim
-    if (slider.isEnabled())
-    {
-        g.setColour (slider.findColour (Slider::thumbColourId));
-    }
-    else
-    {
-        g.setColour (slider.findColour (Slider::thumbColourId).withBrightness (0.4));
-    }
-
-    // Draw the thumb
-    g.strokePath (thumbArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
-}
-
-void RotarySliderWithLabels::paint (juce::Graphics& g)
-{
-    // TRACE_COMPONENT();
-
-    using namespace juce;
-
-    constexpr auto startAng = degreesToRadians (180.f + 45.f);
-    constexpr auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
-
-    const auto range = getRange();
-
-    const auto sliderBounds = getSliderBounds();
-
-    getLookAndFeel().drawRotarySlider (g,
-        sliderBounds.getX(),
-        sliderBounds.getY(),
-        sliderBounds.getWidth(),
-        sliderBounds.getHeight(),
-        getNormalisableRange().convertTo0to1 (getValue()),
-        startAng,
-        endAng,
-        *this);
-
-    const auto center = sliderBounds.toFloat().getCentre();
-    const auto radius = sliderBounds.getWidth() * 0.4f;
-
-    // The text will be dark grey if the control is bypassed
-    if (isEnabled())
-    {
-        g.setColour (colors.textColor);
-    }
-    else
-    {
-        g.setColour (juce::Colours::darkgrey);
-    }
-
-    g.setFont (getTextHeight() * 1.f);
-
-    // Tic labels - min and max values for a continuous control, each value for a rotary switch
-    const auto numChoices = labels.size();
-    for (int i = 0; i < numChoices; ++i)
-    {
-        const auto pos = labels[i].pos;
-        jassert (0.f <= pos);
-
-        const auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
-
-        auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
-
-        // Some height corrections for certain controls - this might be unnecessary with some adjustments to how c is calculated and/or how the text is justified?
-        if (numChoices == 2)
-        {
-            c.y = c.y - 8;
-        }
-
-        if (title == "HP\nSlope\n(dB/oct.)" || title == "LP\nSlope\n(dB/oct.)")
-        {
-            if (i == 0 or i == 4)
-            {
-                c.y = c.y - 8;
-            }
-            if (i == 1)
-            {
-                c.y = c.y - 15;
-            }
-            if (i == 2)
-            {
-                c.y = c.y - 12;
-            }
-            if (i == 3)
-            {
-                c.y = c.y - 15;
-            }
-        }
-
-        // Create rectangle for text bounds
-        Rectangle<float> r;
-        auto str = labels[i].label;
-        r.setSize (GlyphArrangement::getStringWidth (18, str), getTextHeight());
-        r.setCentre (c);
-        r.setY (r.getY() + getTextHeight());
-
-        // Draw tic labels
-        g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
-    }
-
-    // Name of control
-    Rectangle<float> r;
-    r.setSize (getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
-    r.setCentre (center);
-    g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
-}
-
-juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
-{
-    return getLocalBounds();
-}
-
-void RotarySliderWithLabels::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
-{
-    // If this is coming within ~160ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side for controls with stops
-    auto elapsedTime = juce::Time().currentTimeMillis() - getLastMouseWheelMove();
-    if (elapsedTime < 160)
-    {
-        return;
-    }
-    setLastMouseWheelMove (juce::Time().currentTimeMillis());
-    Slider::mouseWheelMove (e, wheel);
-}
+// void LookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, const int y, const int width, const int height, const float sliderPos, const float rotaryStartAngle, const float rotaryEndAngle, juce::Slider& slider)
+// {
+//     using namespace juce;
+//
+//     const auto outline = slider.findColour (Slider::rotarySliderOutlineColourId);
+//     const auto fill = slider.findColour (Slider::rotarySliderFillColourId);
+//
+//     const auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (16);
+//
+//     const auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
+//     const auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle); // Angle corrosponding to the current value of the control
+//     const auto lineW = 1.6f * (jmin (8.0f, radius * 0.5f));
+//     const auto arcRadius = radius - lineW * 0.5f;
+//
+//     // This arc spans the angles corrosponding the full range of possible values
+//     Path backgroundArc;
+//     backgroundArc.addCentredArc (bounds.getCentreX(),
+//         bounds.getCentreY(),
+//         arcRadius,
+//         arcRadius,
+//         0.0f,
+//         rotaryStartAngle,
+//         rotaryEndAngle,
+//         true);
+//
+//     g.setColour (outline);
+//     g.strokePath (backgroundArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
+//
+//     // This arc is the portion of the arc that is below the current value angle
+//     Path valueArc;
+//     valueArc.addCentredArc (bounds.getCentreX(),
+//         bounds.getCentreY(),
+//         arcRadius,
+//         arcRadius,
+//         0.0f,
+//         rotaryStartAngle,
+//         toAngle,
+//         true);
+//     g.setColour (fill);
+//     g.strokePath (valueArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
+//
+//     // The thumb is a section of the background arc
+//     Path thumbArc;
+//     thumbArc.addCentredArc (bounds.getCentreX(),
+//         bounds.getCentreY(),
+//         arcRadius,
+//         arcRadius,
+//         0.0f,
+//         toAngle - 0.18f,
+//         toAngle + 0.18f,
+//         true);
+//
+//     // If control is bypassed, make the thumb color dim
+//     if (slider.isEnabled())
+//     {
+//         g.setColour (slider.findColour (Slider::thumbColourId));
+//     }
+//     else
+//     {
+//         g.setColour (slider.findColour (Slider::thumbColourId).withBrightness (0.4));
+//     }
+//
+//     // Draw the thumb
+//     g.strokePath (thumbArc, PathStrokeType (lineW, PathStrokeType::curved, PathStrokeType::butt));
+// }
+//
+// void RotarySliderTall::paint (juce::Graphics& g)
+// {
+//     // TRACE_COMPONENT();
+//
+//     using namespace juce;
+//
+//     constexpr auto startAng = degreesToRadians (180.f + 45.f);
+//     constexpr auto endAng = degreesToRadians (180.f - 45.f) + MathConstants<float>::twoPi;
+//
+//     const auto range = getRange();
+//
+//     const auto sliderBounds = getSliderBounds();
+//
+//     getLookAndFeel().drawRotarySlider (g,
+//         sliderBounds.getX(),
+//         sliderBounds.getY(),
+//         sliderBounds.getWidth(),
+//         sliderBounds.getHeight(),
+//         getNormalisableRange().convertTo0to1 (getValue()),
+//         startAng,
+//         endAng,
+//         *this);
+//
+//     const auto center = sliderBounds.toFloat().getCentre();
+//     const auto radius = sliderBounds.getWidth() * 0.4f;
+//
+//     // The text will be dark grey if the control is bypassed
+//     if (isEnabled())
+//     {
+//         g.setColour (colors.textColor);
+//     }
+//     else
+//     {
+//         g.setColour (juce::Colours::darkgrey);
+//     }
+//
+//     g.setFont (getTextHeight() * 1.f);
+//
+//     // Tic labels - min and max values for a continuous control, each value for a rotary switch
+//     const auto numChoices = labels.size();
+//     for (int i = 0; i < numChoices; ++i)
+//     {
+//         const auto pos = labels[i].pos;
+//         jassert (0.f <= pos);
+//
+//         const auto ang = jmap (pos, 0.f, static_cast<float> (numChoices) - 1.f, startAng, endAng);
+//
+//         auto c = center.getPointOnCircumference (radius + getTextHeight() * 0.5f + 1.f, ang);
+//
+//         // Some height corrections for certain controls - this might be unnecessary with some adjustments to how c is calculated and/or how the text is justified?
+//         if (numChoices == 2)
+//         {
+//             c.y = c.y - 8;
+//         }
+//
+//         if (title == "HP\nSlope\n(dB/oct.)" || title == "LP\nSlope\n(dB/oct.)")
+//         {
+//             if (i == 0 or i == 4)
+//             {
+//                 c.y = c.y - 8;
+//             }
+//             if (i == 1)
+//             {
+//                 c.y = c.y - 15;
+//             }
+//             if (i == 2)
+//             {
+//                 c.y = c.y - 12;
+//             }
+//             if (i == 3)
+//             {
+//                 c.y = c.y - 15;
+//             }
+//         }
+//
+//         // Create rectangle for text bounds
+//         Rectangle<float> r;
+//         auto str = labels[i].label;
+//         r.setSize (GlyphArrangement::getStringWidth (18, str), getTextHeight());
+//         r.setCentre (c);
+//         r.setY (r.getY() + getTextHeight());
+//
+//         // Draw tic labels
+//         g.drawFittedText (str, r.toNearestInt(), juce::Justification::centred, 1);
+//     }
+//
+//     // Name of control
+//     Rectangle<float> r;
+//     r.setSize (Gui::getMaxStringWidth (g.getCurrentFont(), title), getTextHeight());
+//     r.setCentre (center);
+//     g.drawFittedText (title, r.toNearestInt(), juce::Justification::centred, 1);
+// }
+//
+// juce::Rectangle<int> RotarySliderTall::getSliderBounds() const
+// {
+//     return getLocalBounds();
+// }
+//
+// void RotarySliderTall::mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+// {
+//     // If this is coming within ~160ms of the last time we processed a mouse wheel move, ignore it. This keeps a small mouse wheel move from moving the slider all the way to the other side for controls with stops
+//     auto elapsedTime = juce::Time().currentTimeMillis() - getLastMouseWheelMove();
+//     if (elapsedTime < 160)
+//     {
+//         return;
+//     }
+//     setLastMouseWheelMove (juce::Time().currentTimeMillis());
+//     Slider::mouseWheelMove (e, wheel);
+// }
 
 //===========================================// Spectrum Display
 
