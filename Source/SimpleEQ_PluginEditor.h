@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "../../Gui/PresetPanel.h"
+#include "../../Gui/TopPanel.h"
 #include "../../PluginProcessor.h"
 #include "SimpleEQ_PluginProcessor.h"
 #include "melatonin_inspector/melatonin/helpers/timing.h"
@@ -380,13 +380,13 @@ struct LookAndFeelShort : juce::LookAndFeel_V4
         int y,
         int width,
         int height,
-        float sliderPosProportional,
+        float sliderPos,
         float rotaryStartAngle,
         float rotaryEndAngle,
         juce::Slider&) override;
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
 };
 
 struct RotarySliderLegendComponent final : juce::Component, juce::Timer
@@ -413,7 +413,7 @@ struct RotarySliderLegendComponent final : juce::Component, juce::Timer
     }
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
     float currentAlpha = 0.f;
     bool appearing = false; // !appearing = disappearing
 };
@@ -541,7 +541,7 @@ struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
     }
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
     LookAndFeelShort lnf;
     bool snap { false };
     const std::vector<float>* snapValues { nullptr };
@@ -564,13 +564,13 @@ struct LookAndFeel : juce::LookAndFeel_V4
         int y,
         int width,
         int height,
-        float sliderPosProportional,
+        float sliderPos,
         float rotaryStartAngle,
         float rotaryEndAngle,
         juce::Slider&) override;
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
 };
 
 //=================================================
@@ -618,7 +618,7 @@ struct RotarySliderWithLabels : juce::Slider
     }
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
     LookAndFeel lnf;
     juce::int64 lastMouseWheelMove = 0;
 };
@@ -678,7 +678,7 @@ public:
     }
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
     juce::Colour displayColor = colors.blue;
     PlayBackEQAudioProcessor& audioProcessor;
     PathProducer leftPathProducer;
@@ -694,7 +694,7 @@ struct ResponseCurveComponent final : juce::Component,
                                       juce::AudioProcessorParameter::Listener,
                                       juce::Timer
 {
-    explicit ResponseCurveComponent (PlayBackEQAudioProcessor&, Gui::PresetPanel&);
+    explicit ResponseCurveComponent (PlayBackEQAudioProcessor&, Gui::TopPanel&);
     ~ResponseCurveComponent() override;
 
     void parameterValueChanged (int parameterIndex, float newValue) override;
@@ -732,11 +732,11 @@ struct ResponseCurveComponent final : juce::Component,
     juce::Rectangle<int> getAnalysisArea() const;
 
 private:
-    Gui::colorPalette colors;
+    Gui::ColorPalette colors;
 
     PlayBackEQAudioProcessor& audioProcessor;
 
-    Gui::PresetPanel& presetPanel;
+    Gui::TopPanel& presetPanel;
 
     bool checkRefreshB4Repaint { true };
 
