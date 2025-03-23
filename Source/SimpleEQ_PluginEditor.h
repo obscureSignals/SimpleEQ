@@ -4,13 +4,13 @@
 #include "../../Gui/TopPanel.h"
 #include "../../PluginProcessor.h"
 #include "SimpleEQ_PluginProcessor.h"
+#include "../../Gui/RotarySliders.h"
 #include "melatonin_inspector/melatonin/helpers/timing.h"
 #include <gin/gin.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <sound_meter/sound_meter.h>
-#include <utility>
 
 struct FrequencyLabelsComponent final : juce::Component
 {
@@ -365,191 +365,6 @@ private:
 };
 
 //==============================================
-
-struct LookAndFeelShort : juce::LookAndFeel_V4
-{
-    void drawRotarySlider (juce::Graphics&,
-        int x,
-        int y,
-        int width,
-        int height,
-        float sliderPos,
-        float rotaryStartAngle,
-        float rotaryEndAngle,
-        juce::Slider&) override;
-
-private:
-    Gui::ColorPalette colors;
-};
-
-// struct RotarySliderLegendComponent final : juce::Component, juce::Timer
-// {
-//     explicit RotarySliderLegendComponent()
-//     {
-//         setInterceptsMouseClicks (false, false);
-//     }
-//     void paint (juce::Graphics& g) override;
-//
-//     // Tic labels and positions
-//     struct LabelPos
-//     {
-//         float pos;
-//         juce::String label;
-//     };
-//     juce::Array<LabelPos> labels;
-//
-//     void timerCallback() override;
-//
-//     void setAppearing (const bool isAppearing)
-//     {
-//         appearing = isAppearing;
-//     }
-//
-// private:
-//     Gui::ColorPalette colors;
-//     float currentAlpha = 0.f;
-//     bool appearing = false; // !appearing = disappearing
-// };
-
-//==============================================
-
-struct RotarySliderWithLabelsShort : juce::Slider, juce::Timer
-{
-    explicit RotarySliderWithLabelsShort (const juce::String& unitSuffix) : juce::Slider (juce::Slider::SliderStyle::Rotary,
-                                                                                juce::Slider::TextEntryBoxPosition::TextBoxBelow)
-    {
-        setLookAndFeel (&lnf);
-        setTextValueSuffix (unitSuffix); // set unit suffixes for value display
-        setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentWhite); // make border of value display invisible
-        setColour (juce::Slider::textBoxTextColourId, colors.textColor);
-        setColour (juce::Slider::thumbColourId, colors.cloud.withBrightness (0.9f));
-        // setSliderSnapsToMousePosition(false); // not available for rotary sliders :(
-    }
-
-    ~RotarySliderWithLabelsShort() override
-    {
-        setLookAndFeel (nullptr);
-    }
-
-    // Tic labels and positions
-    struct LabelPos
-    {
-        float pos;
-        juce::String label;
-    };
-    juce::Array<LabelPos> labels;
-
-    juce::String title;
-
-    void paint (juce::Graphics& g) override;
-    juce::Rectangle<int> getSliderBounds() const;
-    static int getTextHeight() { return 14; }
-
-    double snapValue (double attemptedValue, DragMode dragMode) override;
-
-    void mouseDrag (const juce::MouseEvent& event) override;
-
-    void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
-
-    void mouseDown (const juce::MouseEvent& e) override;
-
-    void setCommandControlPressed (const bool isPressed)
-    {
-        commandControlPressed = isPressed;
-    }
-
-    bool getCommandControlPressed() const
-    {
-        return commandControlPressed;
-    }
-
-    void setSnap (const bool shouldSnap)
-    {
-        snap = shouldSnap;
-    }
-
-    void setSnapValues (const std::vector<float>* newSnapValues)
-    {
-        snapValues = newSnapValues;
-    }
-
-    const std::vector<float>* getSnapValues() const
-    {
-        return snapValues;
-    }
-
-    void setIsMouseDrag (const bool dragging)
-    {
-        isMouseDrag = dragging;
-    }
-
-    bool getIsMouseDrag() const
-    {
-        return isMouseDrag;
-    }
-
-    void setIsMouseWheelMove (const bool mouseWheelMoving)
-    {
-        isMouseWheelMove = mouseWheelMoving;
-    }
-
-    bool getIsMouseWheelMove() const
-    {
-        return isMouseWheelMove;
-    }
-
-    void setIsMouseDown (const bool mouseDown)
-    {
-        isMouseDown = mouseDown;
-    }
-
-    bool getIsMouseDown() const
-    {
-        return isMouseDown;
-    }
-
-    void setLastMouseWheelMove (const juce::int64 newTime)
-    {
-        lastMouseWheelMove = newTime;
-    }
-
-    juce::int64 getLastMouseWheelMove() const
-    {
-        return lastMouseWheelMove;
-    }
-
-    void setLegend (RotarySliderLegendComponent* legendToUse)
-    {
-        legend = legendToUse;
-    }
-
-    void mouseEnter (const juce::MouseEvent& event) override;
-    void mouseExit (const juce::MouseEvent& event) override;
-
-    void timerCallback() override;
-
-    void setAppearing (const bool isAppearing)
-    {
-        appearing = isAppearing;
-    }
-
-private:
-    Gui::ColorPalette colors;
-    LookAndFeelShort lnf;
-    bool snap { false };
-    const std::vector<float>* snapValues { nullptr };
-    bool commandControlPressed = false;
-    bool isMouseDrag = false;
-    bool isMouseWheelMove = false;
-    bool isMouseDown = false;
-    juce::int64 lastMouseWheelMove = 0;
-    RotarySliderLegendComponent* legend = nullptr;
-    float currentAlpha = 1.f;
-    bool appearing = false; // !appearing = disappearing
-};
-
-//=======================================================
-
 
 struct PathProducer
 {
