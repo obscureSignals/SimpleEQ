@@ -4,18 +4,18 @@
 
 //===========================================// Spectrum Display
 
-SpectrumDisplay::SpectrumDisplay (PlayBackEQAudioProcessor& p) : audioProcessor (p),
-                                                                 leftPathProducer (audioProcessor.spectrumAnalyzerSampleFifo, p, -80)
+SpectrumDisplay::SpectrumDisplay (PlayBackEQAudioProcessor& p) : audioProcessor (p)
+                                                                 // leftPathProducer (audioProcessor.spectrumAnalyzerSampleFifo, p, -80)
 {
     setInterceptsMouseClicks (false, false); // Passes mouse events through to component behind it
 }
 
 SpectrumDisplay::~SpectrumDisplay() = default;
 
-void SpectrumDisplay::pathProducerProcess (const juce::Rectangle<float> fftBounds)
-{
-    leftPathProducer.process (fftBounds, audioProcessor.getSampleRate());
-}
+// void SpectrumDisplay::pathProducerProcess (const juce::Rectangle<float> fftBounds)
+// {
+//     leftPathProducer.process (fftBounds, audioProcessor.getSampleRate());
+// }
 
 void SpectrumDisplay::paint (juce::Graphics& g)
 {
@@ -24,11 +24,19 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     using namespace juce;
 
     // Get FFT path, fill  it and outline it
-    const auto FFTpath = leftPathProducer.getPath();
+    // const auto FFTpath = leftPathProducer.getPath();
+    // g.setColour (displayColor);
+    // g.setOpacity (0.6);
+    // g.fillPath (FFTpath);
+    // g.strokePath (FFTpath, PathStrokeType (1.f));
+
+    audioProcessor.createAnalyserPlot (analyserPath, getLocalBounds(), 20.0f);
     g.setColour (displayColor);
     g.setOpacity (0.6);
-    g.fillPath (FFTpath);
-    g.strokePath (FFTpath, PathStrokeType (1.f));
+    g.fillPath (analyserPath);
+    g.strokePath (analyserPath, PathStrokeType (1.f));
+
+
 
     // For overlaying multiple paths with some weighted transparency - might be useful at some point
     //    float opaque = 0.5f;
@@ -318,7 +326,7 @@ void ResponseCurveComponent::timerCallback()
 
     const auto fftBounds = getAnalysisArea().toFloat();
 
-    spectrumDisplay.pathProducerProcess (fftBounds);
+    // spectrumDisplay.pathProducerProcess (fftBounds);
 
     if (parametersChanged.compareAndSetBool (false, true))
     {
@@ -596,58 +604,58 @@ void ResponseCurveComponent::resized()
 }
 
 //=================================================================
-void PathProducer::process (const juce::Rectangle<float> fftBounds, const double sampleRate)
-{
-    /** This function will:
-     - Query the processor FIFO to see if any buffers are available
-        - If so shift the oldest data out of the beginning of monoBuffer to make room for the new buffer
-        - Send the monoBuffer to the FFTDataGenerator
-        - (If the size of the FIFO buffers are smaller than the aumount of data required by the FFT, then this has the effect of a moving average)
-     - Query the FFTDataGenerator to see if there are processed FFT data blocks availabe
-        - If so send to pathGenerator
-     - Query the pathGenerator to see if there are paths available
-        - If so, set FFTpath to the new path - FFTpath will SpectrumDisplay::paint to draw the spectrum display
-    */
-
-    // Calculate the appropriate FFT order to pass to FFTDataGenerator.
-    // FFTDataGenerator will change its FFT order if they are different
-    const int newFFTOrder = ceil (log2 (sampleRate / 6));
-
-    juce::AudioBuffer<float> tempIncomingBuffer;
-
-    while (Fifo->getNumCompleteBuffersAvailable() > 0)
-    {
-        if (Fifo->getAudioBuffer (tempIncomingBuffer))
-        {
-            const auto size = tempIncomingBuffer.getNumSamples();
-
-            // Shift every value in monoBuffer starting at index size to the left by size positions
-            juce::FloatVectorOperations::copy (monoBuffer.getWritePointer (0, 0), // Destination
-                monoBuffer.getReadPointer (0, size), // Source
-                monoBuffer.getNumSamples() - size); // Number of values
-
-            // Copy the new buffer from Fifo into the end of monoBuffer
-            juce::FloatVectorOperations::copy (monoBuffer.getWritePointer (0, monoBuffer.getNumSamples() - size), // Destination
-                tempIncomingBuffer.getReadPointer (0, 0), // Source
-                size); // Number of values
-
-            fftDataGenerator.produceFFTDataForRendering (monoBuffer, newFFTOrder);
-        }
-    }
-
-    const auto fftSize = fftDataGenerator.getFFTSize();
-    const auto binWidth = sampleRate / static_cast<double> (fftSize);
-
-    while (fftDataGenerator.getNumAvailableFFTDataBlocks() > 0)
-    {
-        if (fftDataGenerator.getFFTData (fftData))
-        {
-            pathGenerator.generatePath (fftData, fftBounds, fftSize, binWidth);
-        }
-    }
-
-    while (pathGenerator.getNumPathsAvailable() > 0)
-    {
-        pathGenerator.getPath (FFTPath);
-    }
-}
+// void PathProducer::process (const juce::Rectangle<float> fftBounds, const double sampleRate)
+// {
+//     /** This function will:
+//      - Query the processor FIFO to see if any buffers are available
+//         - If so shift the oldest data out of the beginning of monoBuffer to make room for the new buffer
+//         - Send the monoBuffer to the FFTDataGenerator
+//         - (If the size of the FIFO buffers are smaller than the aumount of data required by the FFT, then this has the effect of a moving average)
+//      - Query the FFTDataGenerator to see if there are processed FFT data blocks availabe
+//         - If so send to pathGenerator
+//      - Query the pathGenerator to see if there are paths available
+//         - If so, set FFTpath to the new path - FFTpath will SpectrumDisplay::paint to draw the spectrum display
+//     */
+//
+//     // Calculate the appropriate FFT order to pass to FFTDataGenerator.
+//     // FFTDataGenerator will change its FFT order if they are different
+//     const int newFFTOrder = ceil (log2 (sampleRate / 6));
+//
+//     juce::AudioBuffer<float> tempIncomingBuffer;
+//
+//     while (Fifo->getNumCompleteBuffersAvailable() > 0)
+//     {
+//         if (Fifo->getAudioBuffer (tempIncomingBuffer))
+//         {
+//             const auto size = tempIncomingBuffer.getNumSamples();
+//
+//             // Shift every value in monoBuffer starting at index size to the left by size positions
+//             juce::FloatVectorOperations::copy (monoBuffer.getWritePointer (0, 0), // Destination
+//                 monoBuffer.getReadPointer (0, size), // Source
+//                 monoBuffer.getNumSamples() - size); // Number of values
+//
+//             // Copy the new buffer from Fifo into the end of monoBuffer
+//             juce::FloatVectorOperations::copy (monoBuffer.getWritePointer (0, monoBuffer.getNumSamples() - size), // Destination
+//                 tempIncomingBuffer.getReadPointer (0, 0), // Source
+//                 size); // Number of values
+//
+//             fftDataGenerator.produceFFTDataForRendering (monoBuffer, newFFTOrder);
+//         }
+//     }
+//
+//     const auto fftSize = fftDataGenerator.getFFTSize();
+//     const auto binWidth = sampleRate / static_cast<double> (fftSize);
+//
+//     while (fftDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+//     {
+//         if (fftDataGenerator.getFFTData (fftData))
+//         {
+//             pathGenerator.generatePath (fftData, fftBounds, fftSize, binWidth);
+//         }
+//     }
+//
+//     while (pathGenerator.getNumPathsAvailable() > 0)
+//     {
+//         pathGenerator.getPath (FFTPath);
+//     }
+// }
