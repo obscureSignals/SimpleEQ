@@ -5,8 +5,34 @@
 //===========================================// Spectrum Display
 
 SpectrumDisplay::SpectrumDisplay (PlayBackEQAudioProcessor& p) : audioProcessor (p)
-                                                                 // leftPathProducer (audioProcessor.spectrumAnalyzerSampleFifo, p, -80)
+// leftPathProducer (audioProcessor.spectrumAnalyzerSampleFifo, p, -80)
 {
+    // Create log-scale frequency array from 20Hz to 20kHz for frequency response plot
+    frequencies.resize (NUM_FREQUENCIES);
+    for (size_t i = 0; i < frequencies.size(); ++i)
+    {
+        frequencies[i] = juce::mapToLog10 (static_cast<double> (i) / static_cast<double> (frequencies.size()), 20.0, 20000.0);
+    }
+
+    overallMagnitudeResponse.resize (frequencies.size());
+    std::ranges::fill (overallMagnitudeResponse, 1.0);
+
+    for (auto& response : filterMagnitudeResponses)
+    {
+        response.fill (1.0);
+    }
+
+    // Get inverse RIAA filter coefficients
+    const auto RIAAcoeffs = getRIAACoeffs (audioProcessor.getUpSampleRate());
+    // Convert array to coefficients pointer
+    coeffs.riaaCoeffsGui = new juce::dsp::IIR::Coefficients<float> (Coefficients (RIAAcoeffs));
+
+    // Set RIAA magnitude response
+    coeffs.riaaCoeffsGui->getMagnitudeForFrequencyArray (frequencies.data(),
+        filterMagnitudeResponses[static_cast<size_t> (filters::RIAA)].data(),
+        frequencies.size(),
+        audioProcessor.getUpSampleRate());
+
     setInterceptsMouseClicks (false, false); // Passes mouse events through to component behind it
 }
 
@@ -36,256 +62,209 @@ void SpectrumDisplay::paint (juce::Graphics& g)
     g.fillPath (analyserPath);
     g.strokePath (analyserPath, PathStrokeType (1.f));
 
-
-
-    // For overlaying multiple paths with some weighted transparency - might be useful at some point
-    //    float opaque = 0.5f;
-    //    for (int pathNum = 0; pathNum < numPaths; pathNum++) {
-    //        int idx = (pathCount+pathNum)%numPaths;
-    //        g.setOpacity(opaque);
-    //        g.fillPath(FFTpaths[idx]);
-    //        g.strokePath(FFTpaths[idx], PathStrokeType(1.f));
-    //        opaque = opaque/2.f;
-    //    }
-    //    pathCount++;
-    //    if (pathCount%numPaths == 0){
-    //        pathCount = 0;
-    //    }
-
     // Draw response curve
     g.setColour (Colours::white.withBrightness (0.9));
-    g.strokePath (responseCurve, PathStrokeType (2.f));
+
+    g.strokePath (magnitudeResponse, PathStrokeType (2.f));
 }
 
-void SpectrumDisplay::updateFiltersGUI()
+void SpectrumDisplay::updateCoeffsGUI() // Updates the filter coefficients owned by the editor with the current control values
 {
-    // Updates the filters owned by the editor with the current control values
-
-    const auto settings = audioProcessor.getSettings (audioProcessor.apvts);
     const double sampleRate = audioProcessor.getSampleRate();
 
     // Calculate bass filter coefficients
-    const auto bassCoeffs = getBassCoeffs (settings, sampleRate);
+    const auto bassCoeffs = getBassCoeffs (audioProcessor.getCurrentSettings(), sampleRate);
     // Convert array to coefficients pointer
-    const juce::dsp::IIR::Coefficients<float>::Ptr bassCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (bassCoeffs)));
-    // Apply coefficients to filters
-    updateCoefficients (bassChain_graphic.get<0>().coefficients, bassCoeffsPtr);
-    // Apply bass boost bypass
-    bassChain_graphic.setBypassed<0> (!settings.bassBoostEnable);
+    coeffs.bassCoeffsGui = new juce::dsp::IIR::Coefficients<float> (Coefficients (bassCoeffs));
 
     // Calculate treble filter coefficients
-    const auto trebleCoeffs = getTrebleAttenCoeffs (settings, audioProcessor.getUpSampleRate());
+    const auto trebleCoeffs = getTrebleAttenCoeffs (audioProcessor.getCurrentSettings(), audioProcessor.getUpSampleRate());
     // Convert array to coefficients pointer
-    const juce::dsp::IIR::Coefficients<float>::Ptr trebleCoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (trebleCoeffs)));
-    // Apply coefficients to filters
-    updateCoefficients (trebleChain_graphic.get<0>().coefficients, trebleCoeffsPtr);
-    // Apply treble bypass
-    trebleChain_graphic.setBypassed<0> (!settings.trebleCutEnable);
-
-    // Get inverse RIAA filter coefficients
-    const auto RIAAcoeffs = getRIAACoeffs (audioProcessor.getUpSampleRate());
-    // Convert array to coefficients pointer
-    const juce::dsp::IIR::Coefficients<float>::Ptr RIAACoeffsPtr (new juce::dsp::IIR::Coefficients<float> (Coefficients (RIAAcoeffs)));
-    // Apply coefficients to filters
-    updateCoefficients (RIAAChain_graphic.get<0>().coefficients, RIAACoeffsPtr);
-    // Apply RIAA bypass
-    RIAAChain_graphic.setBypassed<0> (!settings.RIAAEnable);
+    coeffs.trebleCoeffsGui = new juce::dsp::IIR::Coefficients<float> (Coefficients (trebleCoeffs));
 
     // Get coefficients for high-pass filter
-    const auto hpfcoeffsPtr = getHighPassCoeffs (settings, sampleRate);
+    coeffs.hpCoeffsGui = getHighPassCoeffs (audioProcessor.getCurrentSettings(), sampleRate);
 
-    // apply coefficients to filters depending on slope
-    HPChain_graphic.setBypassed<0> (true);
-    HPChain_graphic.setBypassed<1> (true);
+    // Get low pass coefficients
+    coeffs.lpCoeffsGui = getLowPassCoeffs (audioProcessor.getCurrentSettings(), audioProcessor.getSampleRate());
 
-    switch (settings.highPassSlope)
+    // Set coefficients for special curve filters
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> specialCurveCoeffs;
+    if (audioProcessor.getCurrentSettings().specialCurve == SpecialCurve::BBC)
     {
+        coeffs.specialCoeffsGui = getBBCcoeffs (audioProcessor.getSampleRate());
+    }
+    else if (audioProcessor.getCurrentSettings().specialCurve == SpecialCurve::BBC_XTR_311)
+    {
+        coeffs.specialCoeffsGui = getXTRcoeffs (audioProcessor.getSampleRate());
+    }
+}
+
+void SpectrumDisplay::createFrequencyPlot (juce::Path& p, const std::vector<double>& mags, const juce::Rectangle<int> bounds, const float maxGainDB) const
+{
+    const auto y1 = juce::jmap (-1.f * juce::Decibels::gainToDecibels (static_cast<float> (mags[0])), -1 * maxGainDB, maxGainDB, static_cast<float> (bounds.getY()), static_cast<float> (bounds.getBottom()));
+
+    p.startNewSubPath (static_cast<float> (bounds.getX()), y1);
+    const auto xFactor = static_cast<double> (bounds.getWidth()) / frequencies.size();
+    for (size_t i = 1; i < frequencies.size(); ++i)
+    {
+        const auto y = juce::jmap (-1.f * juce::Decibels::gainToDecibels (static_cast<float> (mags[i])), -1 * maxGainDB, maxGainDB, static_cast<float> (bounds.getY()), static_cast<float> (bounds.getBottom()));
+        p.lineTo (static_cast<float> (bounds.getX() + static_cast<double> (i) * xFactor), y);
+    }
+}
+
+void SpectrumDisplay::updateOverallMagResponse()
+{
+    // Set overallMagnitudeResponse to all ones
+    std::ranges::fill (overallMagnitudeResponse, 1.0);
+
+    // Multiply overallMagnitudeResponse by response of each filter that is not bypassed
+    if (audioProcessor.getCurrentSettings().bassBoostEnable.load())
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::bass)].data(), NUM_FREQUENCIES);
+    if (audioProcessor.getCurrentSettings().trebleCutEnable.load())
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::treble)].data(), NUM_FREQUENCIES);
+    if (audioProcessor.getCurrentSettings().RIAAEnable.load())
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::RIAA)].data(), NUM_FREQUENCIES);
+    if (audioProcessor.getCurrentSettings().specialCurveEnable.load())
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::special)].data(), NUM_FREQUENCIES);
+    if (audioProcessor.getCurrentSettings().highPassSlope.load() != Slope::Off)
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::highPass)].data(), NUM_FREQUENCIES);
+    if (audioProcessor.getCurrentSettings().lowPassSlope.load() != Slope::Off)
+        juce::FloatVectorOperations::multiply (overallMagnitudeResponse.data(), filterMagnitudeResponses[static_cast<size_t> (filters::lowPass)].data(), NUM_FREQUENCIES);
+}
+
+void SpectrumDisplay::updateMagnitudeResponses()
+{
+    if (coeffs.bassCoeffsGui != nullptr)
+    {
+        coeffs.bassCoeffsGui->getMagnitudeForFrequencyArray (frequencies.data(),
+            filterMagnitudeResponses[static_cast<size_t> (filters::bass)].data(),
+            frequencies.size(),
+            audioProcessor.getSampleRate());
+    }
+    if (coeffs.trebleCoeffsGui != nullptr)
+    {
+        coeffs.trebleCoeffsGui->getMagnitudeForFrequencyArray (frequencies.data(),
+            filterMagnitudeResponses[static_cast<size_t> (filters::treble)].data(),
+            frequencies.size(),
+            audioProcessor.getUpSampleRate());
+    }
+
+    // Fill highPass magnitude response with ones
+    filterMagnitudeResponses[static_cast<size_t> (filters::highPass)].fill (1.0);
+
+    switch (audioProcessor.getCurrentSettings().highPassSlope.load())
+    { // Based on the slope, enable certain sections. Notice that the cases have no break, therefore the steeper slopes will enable all butterworth filters from the cases with gentler slopes as well.
         case Slope_24:
         {
+            // When you get the high pass coeffients, that method knows the slope, so it will make one or two meaningful butterworth filters based on the current slope. The first filter (<1>) only affects slopes with 18 or 24 dB rolloff. The second filter (<0>) either works with the first filter to achieve 24/18 dB rolloff, or is used in isolation to affect slopes with 12 or 6 dB.
         }
         case Slope_18:
         {
-            updateCoefficients (HPChain_graphic.get<1>().coefficients, hpfcoeffsPtr[1]);
-            HPChain_graphic.setBypassed<1> (false);
+            // Multiply highPass frequency response with linear gain values for this filter
+            std::array<double, NUM_FREQUENCIES> magnitudeResponse {};
+            if (coeffs.hpCoeffsGui[1] != nullptr)
+            {
+                coeffs.hpCoeffsGui[1]->getMagnitudeForFrequencyArray (frequencies.data(),
+                    magnitudeResponse.data(),
+                    frequencies.size(),
+                    audioProcessor.getSampleRate());
+                juce::FloatVectorOperations::multiply (filterMagnitudeResponses[static_cast<size_t> (filters::highPass)].data(), magnitudeResponse.data(), frequencies.size());
+            }
         }
         case Slope_12:
         {
         }
         case Slope_6: // This will not be Butterworth
         {
-            updateCoefficients (HPChain_graphic.get<0>().coefficients, hpfcoeffsPtr[0]);
-            HPChain_graphic.setBypassed<0> (false);
+            // Multiply highPass frequency response with linear gain values for this filter
+            std::array<double, NUM_FREQUENCIES> magnitudeResponse {};
+            if (coeffs.hpCoeffsGui[0] != nullptr)
+            {
+                coeffs.hpCoeffsGui[0]->getMagnitudeForFrequencyArray (frequencies.data(),
+                    magnitudeResponse.data(),
+                    frequencies.size(),
+                    audioProcessor.getSampleRate());
+                juce::FloatVectorOperations::multiply (filterMagnitudeResponses[static_cast<size_t> (filters::highPass)].data(), magnitudeResponse.data(), frequencies.size());
+            }
         }
         case Off:
         {
         }
     }
 
-    // get low pass coefficients
-    const auto lpfcoeffsPtr = getLowPassCoeffs (settings, audioProcessor.getSampleRate());
+    // Fill lowPass magnitude response with ones
+    filterMagnitudeResponses[static_cast<size_t> (filters::lowPass)].fill (1.0);
 
-    // apply coefficients to filters depending on slope
-    LPChain_graphic.setBypassed<0> (true);
-    LPChain_graphic.setBypassed<1> (true);
-
-    switch (settings.lowPassSlope)
-    {
+    switch (audioProcessor.getCurrentSettings().lowPassSlope.load())
+    { // Based on the slope, enable certain sections. Notice that the cases have no break, therefore the steeper slopes will enable all butterworth filters from the cases with gentler slopes as well.
         case Slope_24:
-        {
+        { // When you get the low pass coeffients, that method knows the slope, so it will make one or two meaningful butterworth filters based on the current slope. The first filter (<1>) only affects slopes with 18 or 24 dB rolloff. The second filter (<0>) either works with the first filter to achieve 24/18 dB rolloff, or is used in isolation to affect slopes with 12 or 6 dB.
         }
         case Slope_18:
         {
-            updateCoefficients (LPChain_graphic.get<1>().coefficients, lpfcoeffsPtr[1]);
-            LPChain_graphic.setBypassed<1> (false);
+            // Multiply lowPass frequency response with linear gain values for this filter
+            std::array<double, NUM_FREQUENCIES> magnitudeResponse {};
+            if (coeffs.lpCoeffsGui[1] != nullptr)
+            {
+                coeffs.lpCoeffsGui[1]->getMagnitudeForFrequencyArray (frequencies.data(),
+                    magnitudeResponse.data(),
+                    frequencies.size(),
+                    audioProcessor.getSampleRate());
+                juce::FloatVectorOperations::multiply (filterMagnitudeResponses[static_cast<size_t> (filters::lowPass)].data(), magnitudeResponse.data(), frequencies.size());
+            }
         }
         case Slope_12:
         {
         }
         case Slope_6:
         {
-            updateCoefficients (LPChain_graphic.get<0>().coefficients, lpfcoeffsPtr[0]);
-            LPChain_graphic.setBypassed<0> (false);
+            // Multiply lowPass frequency response with linear gain values for this filter
+            std::array<double, NUM_FREQUENCIES> magnitudeResponse {};
+            if (coeffs.lpCoeffsGui[0] != nullptr)
+            {
+                coeffs.lpCoeffsGui[0]->getMagnitudeForFrequencyArray (frequencies.data(),
+                    magnitudeResponse.data(),
+                    frequencies.size(),
+                    audioProcessor.getSampleRate());
+                juce::FloatVectorOperations::multiply (filterMagnitudeResponses[static_cast<size_t> (filters::lowPass)].data(), magnitudeResponse.data(), frequencies.size());
+            }
         }
         case Off:
         {
         }
     }
 
-    specialCurveChain_graphic.setBypassed<0> (!settings.specialCurveEnable);
-    specialCurveChain_graphic.setBypassed<1> (!settings.specialCurveEnable);
-    specialCurveChain_graphic.setBypassed<2> (!settings.specialCurveEnable);
-    specialCurveChain_graphic.setBypassed<3> (!settings.specialCurveEnable);
+    // Fill special curve magnitude response with ones
+    filterMagnitudeResponses[static_cast<size_t> (filters::special)].fill (1.0);
 
-    // Set coefficients for special curve filters
-    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> specialCurveCoeffs;
-    if (settings.specialCurve == SpecialCurve::BBC)
+    for (auto&& specialCurveCoeff : coeffs.specialCoeffsGui)
     {
-        specialCurveCoeffs = getBBCcoeffs (audioProcessor.getSampleRate());
-    }
-    else if (settings.specialCurve == SpecialCurve::BBC_XTR_311)
-    {
-        specialCurveCoeffs = getXTRcoeffs (audioProcessor.getSampleRate());
-    }
-    updateCoefficients (specialCurveChain_graphic.get<0>().coefficients, specialCurveCoeffs[0]);
-    updateCoefficients (specialCurveChain_graphic.get<1>().coefficients, specialCurveCoeffs[1]);
-    updateCoefficients (specialCurveChain_graphic.get<2>().coefficients, specialCurveCoeffs[2]);
-    updateCoefficients (specialCurveChain_graphic.get<3>().coefficients, specialCurveCoeffs[3]);
-}
-
-void SpectrumDisplay::updateResponseCurve()
-{
-    using namespace juce;
-
-    const auto responseArea = getLocalBounds();
-    const auto w = responseArea.getWidth();
-
-    const auto userPreferences = audioProcessor.getUserPreferences();
-    const auto sampleRate = audioProcessor.getSampleRate();
-    const auto upSampleRate = audioProcessor.getUpSampleRate();
-
-    // This will be a vector of magnitude values for each pixel/frequency that we will conbvert to dB and then turn into a path
-    std::vector<double> mags;
-
-    mags.resize (w);
-
-    responseCurve.clear();
-
-    // Create map to convert values in dB to vertical position in responseArea
-    const double outputMin = responseArea.getBottom();
-    const double outputMax = responseArea.getY();
-    auto map = [outputMin, outputMax] (const double input) {
-        return jmap (input, -30.0, 30.0, outputMin, outputMax);
-    };
-
-    for (int pix = 0; pix < w; ++pix)
-    {
-        // Magnitude for every frequency is 1 if no filters are modifying it
-        double mag = 1.f;
-
-        // Find the frequency asscoiated with this pixel in horizontal dimension of responseArea
-        const auto freq = mapToLog10 (static_cast<double> (pix) / static_cast<double> (w), 20.0, 20000.0);
-
-        // Get the magnitude repsonse at this frequency from each filter and multiply them together
-        if (!trebleChain_graphic.isBypassed<0>())
-        {
-            mag *= trebleChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
-        }
-
-        if (!bassChain_graphic.isBypassed<0>())
-        {
-            mag *= bassChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-
-        if (!HPChain_graphic.isBypassed<0>())
-        {
-            mag *= HPChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!HPChain_graphic.isBypassed<1>())
-        {
-            mag *= HPChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-
-        if (!LPChain_graphic.isBypassed<0>())
-        {
-            mag *= LPChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!LPChain_graphic.isBypassed<1>())
-        {
-            mag *= LPChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-
-        if (!RIAAChain_graphic.isBypassed<0>() && userPreferences.showRIAA)
-        {
-            mag *= RIAAChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, upSampleRate);
-        }
-
-        if (!specialCurveChain_graphic.isBypassed<0>())
-        {
-            mag *= specialCurveChain_graphic.get<0>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!specialCurveChain_graphic.isBypassed<1>())
-        {
-            mag *= specialCurveChain_graphic.get<1>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!specialCurveChain_graphic.isBypassed<2>())
-        {
-            mag *= specialCurveChain_graphic.get<2>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-        if (!specialCurveChain_graphic.isBypassed<3>())
-        {
-            mag *= specialCurveChain_graphic.get<3>().coefficients->getMagnitudeForFrequency (freq, sampleRate);
-        }
-
-        // Magnitude to dB for this pixel/frequency
-        mags[pix] = Decibels::gainToDecibels (mag);
-
-        const auto y = map (mags[pix]);
-        if (pix == 0)
-        {
-            // Start path
-            responseCurve.startNewSubPath (responseArea.getX(), y);
-        }
-        else
-        {
-            // Build path
-            responseCurve.lineTo (responseArea.getX() + pix, y);
-        }
+        std::array<double, NUM_FREQUENCIES> magnitudeResponse {};
+        specialCurveCoeff->getMagnitudeForFrequencyArray (frequencies.data(),
+            magnitudeResponse.data(),
+            frequencies.size(),
+            audioProcessor.getSampleRate());
+        juce::FloatVectorOperations::multiply (filterMagnitudeResponses[static_cast<size_t> (filters::special)].data(), magnitudeResponse.data(), frequencies.size());
     }
 }
 
 void SpectrumDisplay::resized()
 {
-    updateResponseCurve();
+}
+
+// ============================== from frequalizer ================================
+
+void SpectrumDisplay::updateMagnitudeResponsePath (juce::Rectangle<int> plotFrame)
+{
+    magnitudeResponse.clear();
+    createFrequencyPlot (magnitudeResponse, getOverallMagnitudeResponse(), plotFrame, 30.f);
 }
 
 //===========================================// Response Curve
 
 ResponseCurveComponent::ResponseCurveComponent (PlayBackEQAudioProcessor& p, Gui::TopPanel& pp) : audioProcessor (p), presetPanel (pp), spectrumDisplay (audioProcessor)
 {
-    // setOpaque (true);
-    // For overlaying multiple paths with some weighted transparency - might be useful at some point
-    //    FFTpaths.clear();
-    //    FFTpaths.resize(numPaths, path);
 
     // Set this component up as a listener for every parameter so that we can redraw the response curve whenver a parameter is changed
     const auto& params = audioProcessor.getParameters();
@@ -324,17 +303,14 @@ void ResponseCurveComponent::timerCallback()
             return;
     }
 
-    const auto fftBounds = getAnalysisArea().toFloat();
-
+    // const auto fftBounds = getAnalysisArea().toFloat();
     // spectrumDisplay.pathProducerProcess (fftBounds);
 
-    if (parametersChanged.compareAndSetBool (false, true))
-    {
-        spectrumDisplay.updateFiltersGUI();
-        spectrumDisplay.updateResponseCurve();
-    }
-
-    repaint();
+    spectrumDisplay.updateCoeffsGUI();
+    spectrumDisplay.updateMagnitudeResponses();
+    spectrumDisplay.updateOverallMagResponse();
+    spectrumDisplay.updateMagnitudeResponsePath (spectrumDisplay.getLocalBounds());
+    spectrumDisplay.repaint();
 }
 
 void ResponseCurveComponent::paint (juce::Graphics& g)
@@ -514,51 +490,6 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
 
     const auto top = renderArea.getY();
     const auto bottom = renderArea.getBottom();
-    // const auto width = renderArea.getWidth();
-
-    // Draw frequency tic labels
-
-    // const auto freqs = getFrequencies();
-    // const auto xs = getXs (freqs, left, width);
-    //
-    // for (int i = 0; i < freqs.size(); ++i)
-    // {
-    //     auto f = freqs[i];
-    //     const auto x = xs[i];
-    //
-    //     bool addK = false;
-    //     String str;
-    //     if (f > 999.f)
-    //     {
-    //         addK = true;
-    //         f /= 1000.f;
-    //     }
-    //
-    //     str << f;
-    //     if (addK)
-    //         str << "k";
-    //     str << "Hz";
-    //
-    //     const auto textWidth = g.getCurrentFont().getStringWidth (str);
-    //
-    //     Rectangle<int> r;
-    //
-    //     r.setSize (textWidth, fontHeight);
-    //     if (f == 20.f && !addK)
-    //     {
-    //         r.setCentre (x + textWidth / 2.f, 0);
-    //     }
-    //     else
-    //     {
-    //         r.setCentre (x, 0);
-    //     }
-    //     r.setY (fontHeight / 2);
-    //
-    //     g.drawFittedText (str, r, juce::Justification::centred, 1);
-    // }
-
-    // Draw dB tic labels
-
     const auto gain = getGains();
     for (const auto gDb : gain)
     {
@@ -580,16 +511,6 @@ void ResponseCurveComponent::drawTextLabels (juce::Graphics& g) const
 
         g.setColour (colors.textColor);
         g.drawFittedText (str, r, juce::Justification::centred, 1);
-
-        // For tick labels on right for spectrum analyzer
-        //        str.clear();
-        //        str << (gDb - 30.f);
-        //
-        //        r.setX(1);
-        //        textWidth = g.getCurrentFont().getStringWidth(str);
-        //        r.setSize(textWidth, fontHeight);
-        //        g.setColour(Colours::lightgrey);
-        //        g.drawFittedText(str, r, juce::Justification::centred, 1);
     }
 }
 

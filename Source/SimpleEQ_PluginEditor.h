@@ -403,6 +403,24 @@ private:
 
 // ===================================================================
 
+struct coeffsGui
+{
+    juce::dsp::IIR::Coefficients<float>::Ptr bassCoeffsGui;
+    juce::dsp::IIR::Coefficients<float>::Ptr trebleCoeffsGui;
+    juce::dsp::IIR::Coefficients<float>::Ptr riaaCoeffsGui;
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> hpCoeffsGui;
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> lpCoeffsGui;
+    juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>> specialCoeffsGui;
+
+    // The arrays are automatically default-constructed as empty
+    coeffsGui() : bassCoeffsGui (nullptr),
+                  trebleCoeffsGui (nullptr),
+                  riaaCoeffsGui (nullptr)
+    {
+        // hpCoeffs and lpCoeffs are already empty arrays
+    }
+};
+
 class SpectrumDisplay final : public juce::Component
 {
 public:
@@ -411,23 +429,35 @@ public:
     void paint (juce::Graphics& g) override;
     // void pathProducerProcess (juce::Rectangle<float> fftBounds);
     void resized() override;
-    void updateResponseCurve();
-    void updateFiltersGUI();
+    // void updateResponseCurve();
+    void updateCoeffsGUI();
     void setDisplayColor (const juce::Colour newDisplayColor)
     {
         displayColor = newDisplayColor;
     }
+    void updateMagnitudeResponsePath (juce::Rectangle<int> plotFrame);
+    void updateMagnitudeResponses();
+
+    const std::vector<double>& getOverallMagnitudeResponse() { return overallMagnitudeResponse; }
+    void updateOverallMagResponse();
+    void createFrequencyPlot (juce::Path& p, const std::vector<double>& mags, juce::Rectangle<int> bounds, float maxGainDB) const;
 
 private:
     Gui::ColorPalette colors;
     juce::Colour displayColor = colors.blue;
     PlayBackEQAudioProcessor& audioProcessor;
     // PathProducer leftPathProducer;
-    juce::dsp::ProcessorChain<Filter> bassChain_graphic, trebleChain_graphic, RIAAChain_graphic;
-    juce::dsp::ProcessorChain<Filter, Filter> LPChain_graphic, HPChain_graphic;
-    juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter> specialCurveChain_graphic;
-    juce::Path responseCurve;
+    // juce::Path responseCurve;
     juce::Path analyserPath;
+    juce::Path magnitudeResponse;
+    coeffsGui coeffs;
+
+    // Frequencies and magnitudes for filter frequency repsonse display
+    std::vector<double> frequencies;
+    std::vector<double> overallMagnitudeResponse { 1 };
+
+    // Magnitude responses for each filter
+    std::array<std::array<double, NUM_FREQUENCIES>, static_cast<size_t> (filters::COUNT)> filterMagnitudeResponses { 1 };
 };
 
 //=============================================================
@@ -493,11 +523,7 @@ private:
     float freq {}, mag {};
     int mouseX {}, mouseY {};
 
-    juce::Component coordinateComponent; // Offset so that coordinate display corresponds to very point of mouse
+    Component coordinateComponent; // Offset so that coordinate display corresponds to very point of mouse
 
     int refreshRate { 60 };
-    // For overlaying multiple paths with some weighted transparency - might be useful at some point
-    //    std::vector<juce::Path> FFTpaths;
-    //    int numPaths = 10;
-    //    int pathCount = 0;
 };
