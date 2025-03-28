@@ -1,12 +1,9 @@
 
 #pragma once
 
-#include "../../Gui/RotarySliders.h"
 #include "../../Gui/TopPanel.h"
 #include "../../PluginProcessor.h"
-#include "SimpleEQ_PluginProcessor.h"
 #include "melatonin_inspector/melatonin/helpers/timing.h"
-#include <gin/gin.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
